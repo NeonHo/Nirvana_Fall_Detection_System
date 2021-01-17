@@ -125,7 +125,7 @@ def generator(list1, lits2):
     """
     Auxiliar generator: returns the ith element of both given list with each call to next()
     """
-    for x, y in zip(list1, lits2):
+    for x, y in zip(list1, lits2):  # 将两个列表的对应元素组成一一对应的元组。
         yield x, y
 
 
@@ -241,30 +241,32 @@ def test_video(feature_extractor, video_path, ground_truth):
     y_images.sort()  # 对搜索到的图像进行排序
     nb_stacks = len(x_images) - L + 1  # 非重叠采样的个数，每个非重叠的采样就是一个长2L的栈
     # Here nb_stacks optical flow stacks will be stored
-    flow = np.zeros(shape=(224, 224, 2 * L, nb_stacks), dtype=np.float64)  # nb_stack个栈 224×224×2L 数据类型是64位浮点数，
-    gen = generator(x_images, y_images)
-    for i in range(len(x_images)):
-        flow_x_file, flow_y_file = gen.next()
-        img_x = cv2.imread(flow_x_file, cv2.IMREAD_GRAYSCALE)
-        img_y = cv2.imread(flow_y_file, cv2.IMREAD_GRAYSCALE)
+    flow = np.zeros(shape=(224, 224, 2 * L, nb_stacks), dtype=np.float64)  # nb_stacks个栈 224×224×2L 数据类型是64位浮点数，
+    gen = generator(x_images, y_images)  # 产生一个生成<x_image, y_image>元组列表的生成器，用于下面循环的迭代。
+    for i in range(len(x_images)):  # 第i帧图像
+        flow_x_file, flow_y_file = gen.next()  # 获得第i帧图像的横轴纵轴元组。
+        img_x = cv2.imread(flow_x_file, cv2.IMREAD_GRAYSCALE)  # 读入第i张横轴上灰度图片
+        img_y = cv2.imread(flow_y_file, cv2.IMREAD_GRAYSCALE)  # 读入第i张纵轴上灰度图片
         # Assign an image i to the jth stack in the kth position, but also
         # in the j+1th stack in the k+1th position and so on
         # (for sliding window)
-        for s in list(reversed(range(min(10, i + 1)))):
-            if i - s < nb_stacks:
+        for s in list(reversed(range(min(10, i + 1)))):  # L = 10 一个栈的尺寸VS当前图像的索引，取最小值构成一个索引表。
+            if i - s < nb_stacks:  # 栈个数限制以内可以赋值。
+                # 将横向和纵向的两张图片一前一后放在栈中。
                 flow[:, :, 2 * s, i - s] = img_x
                 flow[:, :, 2 * s + 1, i - s] = img_y
-        del img_x, img_y
-        gc.collect()
+        del img_x, img_y  # 删除的是变量名，数据还在原来的内存中。
+        gc.collect()  # 垃圾回收
     flow = flow - np.tile(flow_mean[..., np.newaxis], (1, 1, 1, flow.shape[3]))
-    flow = np.transpose(flow, (3, 0, 1, 2))
-    predictions = np.zeros((flow.shape[0], num_features), dtype=np.float64)
-    truth = np.zeros((flow.shape[0], 1), dtype=np.float64)
+    # 先将归一化矩阵flow_mean重复nb_stacks次，即[224, 224, 2L] × nb_stacks，让flow矩阵减flow_mean得到nb_stacks个被归一化的栈构成矩阵。
+    flow = np.transpose(flow, (3, 0, 1, 2))  # 将每个元素的3号坐标提前到0号。
+    predictions = np.zeros((flow.shape[0], num_features), dtype=np.float64)  # 创建预测矩阵，nb_stacks×特征数4096
+    truth = np.zeros((flow.shape[0], 1), dtype=np.float64)  # 真值矩阵 nb_stacks×1
     # Process each stack: do the feed-forward pass
-    for i in range(flow.shape[0]):
-        prediction = feature_extractor.predict(np.expand_dims(flow[i, ...], 0))
-        predictions[i, ...] = prediction
-        truth[i] = ground_truth
+    for i in range(flow.shape[0]):  # 进行nb_stacks次循环
+        prediction = feature_extractor.predict(np.expand_dims(flow[i, ...], 0))  # 输入i号测试样本的4096个特征值，并进行预测
+        predictions[i, ...] = prediction  # 预测出结果并赋值给predictions向量。
+        truth[i] = ground_truth  # ？？？ground_truth是什么？
     return predictions, truth
 
 
