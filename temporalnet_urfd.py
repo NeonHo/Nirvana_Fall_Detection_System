@@ -47,8 +47,8 @@ checkpoint_path = best_model_path + 'fold_'  # ？？？ 检查点文件的存�
 saved_files_folder = 'saved_features/'  # URFD数据集中提取的特征和标签的存放路径
 features_file = saved_files_folder + 'features_urfd_tf.h5'  # URFD中提取的特征
 labels_file = saved_files_folder + 'labels_urfd_tf.h5'  # URFD中提取特征一一对应的标签
-features_key = 'features'  # 如果要训练自己的数据集，这些就有用
-labels_key = 'labels'  # 如果要训练自己的数据集，这些就有用
+features_key = 'features'  # 如果要训练自己的数据集，这些就有用，hdf5文件钟特征一栏的键名
+labels_key = 'labels'  # 如果要训练自己的数据集，这些就有用，hdf5文件钟标签一栏的键名
 
 L = 10  # RGB图片组成的堆栈的尺寸
 num_features = 4096  # 特征的数量
@@ -131,16 +131,15 @@ def generator(list1, lits2):
 
 def saveFeatures(feature_extractor, features_file, labels_file, features_key, labels_key):
     """
-    Function to load the optical flow stacks, do a feed-forward through the
-	 feature extractor (VGG16) and
-    store the output feature vectors in the file 'features_file' and the
-	labels in 'labels_file'.
+    Function to
+    load the optical flow stacks,
+    do a feed-forward through the feature extractor (VGG16)
+    and
+    store the output feature vectors in the file 'features_file' and the labels in 'labels_file'.
     Input:
     * feature_extractor: model VGG16 until the fc6 layer.
-    * features_file: path to the hdf5 file where the extracted features are
-	 going to be stored
-    * labels_file: path to the hdf5 file where the labels of the features
-	 are going to be stored
+    * features_file: path to the hdf5 file where the extracted features are going to be stored
+    * labels_file: path to the hdf5 file where the labels of the features are going to be stored
     * features_key: name of the key for the hdf5 file to store the features
     * labels_key: name of the key for the hdf5 file to store the labels
     """
@@ -150,41 +149,41 @@ def saveFeatures(feature_extractor, features_file, labels_file, features_key, la
 
     # Load the mean file to subtract to the images
     d = sio.loadmat(mean_file)
-    flow_mean = d['image_mean']
+    flow_mean = d['image_mean']  # 用来归一化的参数
 
     # Fill the folders and classes arrays with all the paths to the data
-    folders, classes = [], []
+    folders, classes = [], []  # folders 统计有多少个达标的录像样本，只要通过该样本的x_images数是否超过10个就能判断，没必要再计数y_images.
     fall_videos = [f for f in os.listdir(data_folder + class0)
-                   if os.path.isdir(os.path.join(data_folder + class0, f))]
-    fall_videos.sort()
+                   if os.path.isdir(os.path.join(data_folder + class0, f))]  # 将标记为摔倒的文件夹中的众多样本录像文件夹组成一个列表。
+    fall_videos.sort()  # 对这些标记摔倒的录像文件夹进行排序
     for fall_video in fall_videos:
-        x_images = glob.glob(data_folder + class0 + '/' + fall_video
-                             + '/flow_x*.jpg')
-        if int(len(x_images)) >= 10:
+        x_images = glob.glob(data_folder + class0 + '/' + fall_video + '/flow_x*.jpg')  # 将每个样本文件夹中的所有光流图片全拿出来。
+        if int(len(x_images)) >= 10:  # 光流能组成超过10帧就是符合标准，可以将路径放到文件列表和类列表中。并且类都赋值为0即表示摔倒。
             folders.append(data_folder + class0 + '/' + fall_video)
             classes.append(0)
 
     not_fall_videos = [f for f in os.listdir(data_folder + class1)
-                       if os.path.isdir(os.path.join(data_folder + class1, f))]
-    not_fall_videos.sort()
+                       if os.path.isdir(os.path.join(data_folder + class1, f))]  # 将标记为非摔倒的文件夹中的众多样本录像文件夹组成一个列表。
+    not_fall_videos.sort()  # 对这些标记非摔倒的录像文件夹进行排序
     for not_fall_video in not_fall_videos:
-        x_images = glob.glob(data_folder + class1 + '/' + not_fall_video
-                             + '/flow_x*.jpg')
-        if int(len(x_images)) >= 10:
+        x_images = glob.glob(data_folder + class1 + '/' + not_fall_video + '/flow_x*.jpg')
+        if int(len(x_images)) >= 10:  # 光流能组成超过10帧就是符合标准，可以将路径放到文件列表和类列表中。并且类都赋值为1即表示非摔倒。
             folders.append(data_folder + class1 + '/' + not_fall_video)
             classes.append(1)
 
     # Total amount of stacks, with sliding window = num_images-L+1
     nb_total_stacks = 0
     for folder in folders:
-        x_images = glob.glob(folder + '/flow_x*.jpg')
-        nb_total_stacks += len(x_images) - L + 1
+        x_images = glob.glob(folder + '/flow_x*.jpg')  # 搜索所有的横向光流图
+        nb_total_stacks += len(x_images) - L + 1  # 计算共需要多少个栈
 
     # File to store the extracted features and datasets to store them
     # IMPORTANT NOTE: 'w' mode totally erases previous data
-    h5features = h5py.File(features_file, 'w')
-    h5labels = h5py.File(labels_file, 'w')
+    h5features = h5py.File(features_file, 'w')  # 完全清除特征文件中的内容重新写入
+    h5labels = h5py.File(labels_file, 'w')  # 完全清楚标签文件中的内容重新写入
+    # 预计在特征数据集中写入nb_total_stacks×4096个特征数据。
     dataset_features = h5features.create_dataset(features_key, shape=(nb_total_stacks, num_features), dtype='float64')
+    # 预计在标签数据集中写入nb_total_stacks个特征数据。
     dataset_labels = h5labels.create_dataset(labels_key, shape=(nb_total_stacks, 1), dtype='float64')
     cont = 0
 
@@ -211,23 +210,21 @@ def saveFeatures(feature_extractor, features_file, labels_file, features_key, la
             del img_x, img_y
             gc.collect()
 
-        # Subtract mean
-        flow = flow - np.tile(flow_mean[..., np.newaxis],
-                              (1, 1, 1, flow.shape[3]))
+        # Subtract mean 减去均值，做到归一化。
+        flow = flow - np.tile(flow_mean[..., np.newaxis], (1, 1, 1, flow.shape[3]))
         flow = np.transpose(flow, (3, 0, 1, 2))
         predictions = np.zeros((flow.shape[0], num_features), dtype=np.float64)
         truth = np.zeros((flow.shape[0], 1), dtype=np.float64)
-        # Process each stack: do the feed-forward pass and store
-        # in the hdf5 file the output
+        # Process each stack: do the feed-forward pass and store in the hdf5 file the output
         for i in range(flow.shape[0]):
-            prediction = feature_extractor.predict(np.expand_dims(flow[i, ...], 0))
-            predictions[i, ...] = prediction
-            truth[i] = label
+            prediction = feature_extractor.predict(np.expand_dims(flow[i, ...], 0))  # 进行预测。
+            predictions[i, ...] = prediction  # 预测值放入列表
+            truth[i] = label  # 真实值放入列表
         dataset_features[cont:cont + flow.shape[0], :] = predictions
         dataset_labels[cont:cont + flow.shape[0], :] = truth
         cont += flow.shape[0]
     h5features.close()
-    h5labels.close()
+    h5labels.close()  # 两个文件的流都关闭，达到写入的效果。
 
 
 def exam_video(feature_extractor, video_path, ground_truth):
@@ -335,7 +332,7 @@ def main():
         layer_dict[layer].set_weights((w2, b2))
 
     # Copy the weights of the first fully-connected layer (fc6)
-    layer = layerscaffe[-3]
+    layer = layerscaffe[-3]  # 所有的全连接层进行权重赋值。
     w2, b2 = h5['data'][layer]['0'], h5['data'][layer]['1']
     w2 = np.transpose(np.asarray(w2), (1, 0))
     b2 = np.asarray(b2)
