@@ -213,7 +213,7 @@ def saveFeatures(feature_extractor, features_file, labels_file, features_key, la
         # Subtract mean 减去均值，做到归一化。
         flow = flow - np.tile(flow_mean[..., np.newaxis], (1, 1, 1, flow.shape[3]))
         flow = np.transpose(flow, (3, 0, 1, 2))
-        predictions = np.zeros((flow.shape[0], num_features), dtype=np.float64)
+        predictions = np.zeros((flow.shape[0], num_features), dtype=np.float64)  # 创建预测矩阵，nb_stacks×特征数4096
         truth = np.zeros((flow.shape[0], 1), dtype=np.float64)
         # Process each stack: do the feed-forward pass and store in the hdf5 file the output
         for i in range(flow.shape[0]):
@@ -348,10 +348,8 @@ def main():
     # TRAINING
     # ========================================================================  
 
-    adam = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999,
-                epsilon=1e-08)
-    model.compile(optimizer=adam, loss='categorical_crossentropy',
-                  metrics=['accuracy'])
+    adam = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08)  # 训练的参数：学习率；β1和β2；ε阈值，
+    model.compile(optimizer=adam, loss='categorical_crossentropy', metrics=['accuracy'])  # 多分类损失函数
 
     h5features = h5py.File(features_file, 'r')
     h5labels = h5py.File(labels_file, 'r')
