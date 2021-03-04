@@ -52,7 +52,7 @@ labels_key = 'labels'  # 如果要训练自己的数据集，这些就有用，h
 
 L = 10  # RGB图片组成的堆栈的尺寸
 num_features = 4096  # 特征的数量
-batch_norm = True  # 是否需要批量归一化正则化
+batch_norm = True  # 是否需要批量归一化
 learning_rate = 0.0001  # 拟合过程中的学习率
 mini_batch_size = 64  # 最小批的尺寸
 weight_0 = 1  # 多分类问题中只有摔倒这一类有独一无二的权重
@@ -137,7 +137,7 @@ def saveFeatures(feature_extractor, features_file, labels_file, features_key, la
     and
     store the output feature vectors in the file 'features_file' and the labels in 'labels_file'.
     Input:
-    * feature_extractor: model VGG16 until the fc6 layer.
+    * feature_extractor: model VGG16 until the fc6 layer. 是直到fc6层的VGG16模型
     * features_file: path to the hdf5 file where the extracted features are going to be stored
     * labels_file: path to the hdf5 file where the labels of the features are going to be stored
     * features_key: name of the key for the hdf5 file to store the features
@@ -181,9 +181,9 @@ def saveFeatures(feature_extractor, features_file, labels_file, features_key, la
     # IMPORTANT NOTE: 'w' mode totally erases previous data
     h5features = h5py.File(features_file, 'w')  # 完全清除特征文件中的内容重新写入
     h5labels = h5py.File(labels_file, 'w')  # 完全清楚标签文件中的内容重新写入
-    # 预计在特征数据集中写入nb_total_stacks×4096个特征数据。
+    # 预计在特征数据集中写入nb_total_stacks×4096个特征数据。Shape:(10652, 4096)
     dataset_features = h5features.create_dataset(features_key, shape=(nb_total_stacks, num_features), dtype='float64')
-    # 预计在标签数据集中写入nb_total_stacks个特征数据。
+    # 预计在标签数据集中写入nb_total_stacks个特征数据。Shape:(10652, 1)
     dataset_labels = h5labels.create_dataset(labels_key, shape=(nb_total_stacks, 1), dtype='float64')
     cont = 0
 
@@ -348,7 +348,7 @@ def main():
     # TRAINING
     # ========================================================================  
 
-    adam = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08)  # 训练的参数：学习率；β1和β2；ε阈值，
+    adam = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08)  # Adam梯度下降：训练的参数：学习率；β1和β2；ε阈值，
     model.compile(optimizer=adam, loss='categorical_crossentropy', metrics=['accuracy'])  # 多分类损失函数
 
     h5features = h5py.File(features_file, 'r')
@@ -371,17 +371,15 @@ def main():
     kf_nofalls = KFold(n_splits=5, shuffle=True)
     kf_nofalls.get_n_splits(X_full[ones_full, ...])
 
-    sensitivities = []
+    sensitivities = []  # 评估性能用的5个参数。
     specificities = []
     fars = []
     mdrs = []
     accuracies = []
 
     fold_number = 1
-    # CROSS-VALIDATION: Stratified partition of the dataset into
-    # train/test sets
-    for ((train_index_falls, test_index_falls),
-         (train_index_nofalls, test_index_nofalls)) in zip(
+    # CROSS-VALIDATION: Stratified partition of the dataset into train/test sets
+    for ((train_index_falls, test_index_falls), (train_index_nofalls, test_index_nofalls)) in zip(
         kf_falls.split(X_full[zeroes_full, ...]),
         kf_nofalls.split(X_full[ones_full, ...])
     ):
@@ -446,30 +444,32 @@ def main():
         y_train = y_train[allin]
 
         # ==================== CLASSIFIER ========================
-        extracted_features = Input(shape=(num_features,),
-                                   dtype='float32', name='input')
-        if batch_norm:
+        extracted_features = Input(shape=(num_features,), dtype='float32', name='input')
+        if batch_norm:  # 批量归一化
             x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(extracted_features)
             x = Activation('relu')(x)
         else:
             x = ELU(alpha=1.0)(extracted_features)
 
-        x = Dropout(0.9)(x)
+        x = Dropout(0.9)(x)  # 以0.9的概率进行丢弃正则化。
         x = Dense(4096, name='fc2', kernel_initializer='glorot_uniform')(x)
+        # 4096 output units, Xavier uniform initializer
         if batch_norm:
             x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
             x = Activation('relu')(x)
         else:
             x = ELU(alpha=1.0)(x)
-        x = Dropout(0.8)(x)
-        x = Dense(1, name='predictions',
-                  kernel_initializer='glorot_uniform')(x)
-        x = Activation('sigmoid')(x)
+        x = Dropout(0.8)(x)  # 以0.8的概率进行丢弃正则化。
+        x = Dense(1, name='predictions', kernel_initializer='glorot_uniform')(x)
+        # 1 output unit, Xavier uniform initializer
+        x = Activation('sigmoid')(x)  # sigmoid function.
 
-        classifier = Model(inputs=extracted_features,
-                           outputs=x, name='classifier')
+        classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
+        # 分类器，输入提取的特征，输出真值判断。
         fold_best_model_path = best_model_path + 'urfd_fold_{}.h5'.format(fold_number)
+        # models/urfd_fold_1.h5 是分类器本身，我已经训练出来了。
         classifier.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
+        # Adam优化器， 代价函数二值交叉混合，用精确度度量。
 
         if not use_checkpoint:
             # ==================== TRAINING ========================     
@@ -503,12 +503,12 @@ def main():
                 callbacks=callbacks
             )
 
-            if not use_validation:
+            if not use_validation:  # 如果不使用验证集。
                 classifier.save(fold_best_model_path)
 
             plot_training_info(plots_folder + exp, ['accuracy', 'loss'], save_plots, history.history)
 
-            if use_validation and use_val_for_training:
+            if use_validation and use_val_for_training:  # 如果使用验证集去训练。
                 classifier = load_model(fold_best_model_path)
 
                 # Use full training set (training+validation)
@@ -525,22 +525,22 @@ def main():
                     callbacks=callbacks
                 )
 
-                classifier.save(fold_best_model_path)
+                classifier.save(fold_best_model_path)  # 将分类器保存到fold_best_model_path中。
 
         # ==================== EVALUATION ========================     
 
         # Load best model
         print('Model loaded from checkpoint')
-        classifier = load_model(fold_best_model_path)
+        classifier = load_model(fold_best_model_path)  # 分类器是从fold_best_model_path中加载的。
 
-        predicted = classifier.predict(np.asarray(X_test))
+        predicted = classifier.predict(np.asarray(X_test))  # 输出预测向量，单元值为浮点数。
         for i in range(len(predicted)):
             if predicted[i] < threshold:
-                predicted[i] = 0
+                predicted[i] = 0  # 小于阈值则为假
             else:
-                predicted[i] = 1
+                predicted[i] = 1  # 大于阈值则为真
         # Array of predictions 0/1
-        predicted = np.asarray(predicted).astype(int)
+        predicted = np.asarray(predicted).astype(int)  # 转换为整型
         # Compute metrics and print them
         cm = confusion_matrix(y_test, predicted, labels=[0, 1])
         tp = cm[0][0]
