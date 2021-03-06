@@ -16,11 +16,19 @@ seed(1)
 matplotlib.use('Agg')
 
 
+def generator(list1, list2):
+    """
+    Auxiliary generator: returns the ith element of both given list with each call to next()
+    """
+    for x, y in zip(list1, list2):  # 将两个列表的对应元素组成一一对应的元组。
+        yield x, y
+
+
 class FeatureExtractor:
-    def __init__(self, network_weight_path, mean_file_path, num_features=4096):
+    def __init__(self, network_weight_path, mean_file_path, num_features=4096, features_key='features'):
         """
 
-        :param network_weight_path: 用于提取特征的神经网络序列模型的参数文件路径。
+        :param network_weight_path: 用于提取特征的神经网络序列模型的参数文件路径，包含文件名。
         :param num_features: 需要提取出的特征维数。
         """
         # ========================================================================
@@ -31,7 +39,7 @@ class FeatureExtractor:
         self.mean_file_path = mean_file_path
         self.num_features = num_features
         self.stack_length = 10  # RGB图片组成的堆栈的尺寸
-        self.features_key = 'features'  # 提取的H5特征文件中的键名
+        self.features_key = features_key  # 提取的H5特征文件中的键名
 
         self.model = Sequential()  # 多个网络层的线性堆叠
 
@@ -100,18 +108,11 @@ class FeatureExtractor:
         b2 = np.asarray(b2)
         layer_dict[layer].set_weights((w2, b2))
 
-    def generator(self, list1, list2):
-        """
-        Auxiliary generator: returns the ith element of both given list with each call to next()
-        """
-        for x, y in zip(list1, list2):  # 将两个列表的对应元素组成一一对应的元组。
-            yield x, y
-
     def extract(self, optical_frame_path, features_path):
         """
 
-        :param optical_frame_path: 光流图像所在文件路径
-        :param features_path: 提取出的特征的文件路径
+        :param optical_frame_path: 光流图像所在文件路径，不包含图片名称。
+        :param features_path: 提取出的特征的文件路径，不包含H5文件名。
         :return: None
         """
         # Load the mean file to subtract to the images
@@ -125,7 +126,7 @@ class FeatureExtractor:
 
         # File to store the extracted features and datasets to store them
         # IMPORTANT NOTE: 'w' mode totally erases previous data
-        h5features = h5py.File(features_path, 'w')  # 完全清除特征文件中的内容重新写入
+        h5features = h5py.File(features_path + "\\features.h5", 'w')  # 完全清除特征文件中的内容重新写入
         # 预计在特征数据集中写入nb_total_stacks×4096个特征数据。Shape:(nb_total_stacks, 4096)
         dataset_features = h5features.create_dataset(self.features_key, shape=(nb_stacks, self.num_features),
                                                      dtype='float64')
@@ -133,9 +134,9 @@ class FeatureExtractor:
 
         # Here nb_stacks optical flow stacks will be stored
         flow = np.zeros(shape=(224, 224, 2 * self.stack_length, nb_stacks), dtype=np.float64)
-        gen = self.generator(x_images, y_images)
+        gen = generator(x_images, y_images)
         for i in range(len(x_images)):
-            flow_x_file, flow_y_file = gen.next()
+            flow_x_file, flow_y_file = next(gen)
             img_x = cv2.imread(flow_x_file, cv2.IMREAD_GRAYSCALE)
             img_y = cv2.imread(flow_y_file, cv2.IMREAD_GRAYSCALE)
             # Assign an image i to the jth stack in the kth position, but also in the j+1th stack in the k+1th

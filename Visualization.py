@@ -9,7 +9,7 @@ class VisualizerDiy:
             print("Shape:" + str(h5_file[key].shape))
             for index_row in range(0, h5_file[key].shape[0]):
                 for index_column in range(0, h5_file[key].shape[1]):
-                    print(h5_file[key].value[index_row][index_column], end = "\t")
+                    print(h5_file[key].value[index_row][index_column], end="\t")
                 print()
 
 
