@@ -119,8 +119,8 @@ class FeatureExtractor:
         d = sio.loadmat(self.mean_file_path)
         flow_mean = d['image_mean']  # 用来归一化的参数
 
-        x_images = glob.glob(optical_frame_path + '/flow_x*.jpg')  # 将每个样本文件夹中的所有光流图片全拿出来。
-        y_images = glob.glob(optical_frame_path + '/flow_y*.jpg')
+        x_images = glob.glob(optical_frame_path + '\\flow_x*.jpg')  # 将每个样本文件夹中的所有光流图片全拿出来。
+        y_images = glob.glob(optical_frame_path + '\\flow_y*.jpg')
 
         nb_stacks = len(x_images) - self.stack_length + 1  # 计算共需要多少个栈
 
@@ -130,7 +130,6 @@ class FeatureExtractor:
         # 预计在特征数据集中写入nb_total_stacks×4096个特征数据。Shape:(nb_total_stacks, 4096)
         dataset_features = h5features.create_dataset(self.features_key, shape=(nb_stacks, self.num_features),
                                                      dtype='float64')
-        cont = 0
 
         # Here nb_stacks optical flow stacks will be stored
         flow = np.zeros(shape=(224, 224, 2 * self.stack_length, nb_stacks), dtype=np.float64)
@@ -156,6 +155,5 @@ class FeatureExtractor:
         for i in range(flow.shape[0]):
             prediction = self.model.predict(np.expand_dims(flow[i, ...], 0))  # 进行预测。
             predictions[i, ...] = prediction  # 预测值放入列表
-        dataset_features[cont:cont + flow.shape[0], :] = predictions
-        cont += flow.shape[0]
+        dataset_features[0 + flow.shape[0], :] = predictions
         h5features.close()

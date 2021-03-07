@@ -559,8 +559,7 @@ def main():
 
         print('FOLD {} results:'.format(fold_number))
         print('TP: {}, TN: {}, FP: {}, FN: {}'.format(tp, tn, fp, fn))
-        print('TPR: {}, TNR: {}, FPR: {}, FNR: {}'.format(
-            tpr, tnr, fpr, fnr))
+        print('TPR: {}, TNR: {}, FPR: {}, FNR: {}'.format(tpr, tnr, fpr, fnr))
         print('Sensitivity/Recall: {}'.format(recall))
         print('Specificity: {}'.format(specificity))
         print('Precision: {}'.format(precision))
@@ -576,16 +575,11 @@ def main():
         fold_number += 1
 
     print('5-FOLD CROSS-VALIDATION RESULTS ===================')
-    print("Sensitivity: %.2f%% (+/- %.2f%%)" % (np.mean(sensitivities) * 100.,
-                                                np.std(sensitivities) * 100.))
-    print("Specificity: %.2f%% (+/- %.2f%%)" % (np.mean(specificities) * 100.,
-                                                np.std(specificities) * 100.))
-    print("FAR: %.2f%% (+/- %.2f%%)" % (np.mean(fars) * 100.,
-                                        np.std(fars) * 100.))
-    print("MDR: %.2f%% (+/- %.2f%%)" % (np.mean(mdrs) * 100.,
-                                        np.std(mdrs) * 100.))
-    print("Accuracy: %.2f%% (+/- %.2f%%)" % (np.mean(accuracies) * 100.,
-                                             np.std(accuracies) * 100.))
+    print("Sensitivity: %.2f%% (+/- %.2f%%)" % (np.mean(sensitivities) * 100., np.std(sensitivities) * 100.))
+    print("Specificity: %.2f%% (+/- %.2f%%)" % (np.mean(specificities) * 100., np.std(specificities) * 100.))
+    print("FAR: %.2f%% (+/- %.2f%%)" % (np.mean(fars) * 100., np.std(fars) * 100.))
+    print("MDR: %.2f%% (+/- %.2f%%)" % (np.mean(mdrs) * 100., np.std(mdrs) * 100.))
+    print("Accuracy: %.2f%% (+/- %.2f%%)" % (np.mean(accuracies) * 100., np.std(accuracies) * 100.))
 
 
 if __name__ == '__main__':
