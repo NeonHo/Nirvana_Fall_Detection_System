@@ -3,9 +3,9 @@ from Classifier import Classifier
 
 
 def main():
-    weight_path = "F:\\fsociety\\graduation_project\\Fall-Detection-with-CNNs-and-Optical-Flow-master\\otherFiles" \
+    weight_path = "/\\otherFiles" \
                   "\\weights.h5 "
-    mean_path = "F:\\fsociety\\graduation_project\\Fall-Detection-with-CNNs-and-Optical-Flow-master\\otherFiles" \
+    mean_path = "/\\otherFiles" \
                 "\\flow_mean.mat "
     feature_extractor = FeatureExtractor(weight_path, mean_path)
     optical_frame_path = "F:\\fsociety\\graduation_project\\Project\\TestExampleInTrainingSet\\fall"
