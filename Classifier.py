@@ -25,7 +25,7 @@ class Classifier:
         for i in range(len(predicted)):
             if predicted[i] < self.threshold:
                 predicted[i] = 0  # 小于阈值则为假
+                print("您所看护的老人摔倒了！")
             else:
                 predicted[i] = 1  # 大于阈值则为真
-                print("您所看护的老人摔倒了！")
         return predicted

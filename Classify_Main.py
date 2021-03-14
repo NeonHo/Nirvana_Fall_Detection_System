@@ -9,11 +9,11 @@ from Classifier import Classifier
 def main():
     # Directories path
     video_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\videos\\"
-    flow_image_path = "F:\\fsociety\\graduation_project\\Project\\TestClassifier\\Test1Package\\flow\\"
-    features_path = "F:\\fsociety\\graduation_project\\Project\\TestClassifier\\Test1Package\\features\\"
+    flow_image_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\flow\\"
+    features_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\features\\"
     weight_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\"
     mean_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\"
-    fold_best_model_path = "F:\\fsociety\\graduation_project\\Project\\Copy\\"
+    fold_best_model_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\URFD_results\\"
     # Videographer
     videographer = Videographer()
     videographer.get_video_constantly(video_path, 224, 224)

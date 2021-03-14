@@ -28,6 +28,8 @@ class OpticalGenerator:
         cont = 0
         while ret:
             ret, frame2 = video_pointer.read()  # read the next frame of the video.
+            if not ret:
+                break
             frame2 = cv.resize(frame2, (width, height))
             next_frame = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)  # convert color BGR to gray.
             flow = self.tvl1.calc(previous_frame, next_frame, None)
@@ -40,7 +42,7 @@ class OpticalGenerator:
             hsv[..., 2] = cv.normalize(mag, None, 0, 255, cv.NORM_MINMAX)
             bgr = cv.cvtColor(hsv, cv.COLOR_HSV2BGR)
             cv.imshow('BGR', bgr)  # show the BGR flow image.
-            k = cv.waitKey(10) & 0xff
+            k = cv.waitKey(1) & 0xff
             if k == 27:  # esc key to escape.
                 break
             cv.imwrite(flow_save_path + "flow_x_" + str(cont) + ".jpg", flow[:, :, 0])
