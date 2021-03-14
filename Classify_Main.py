@@ -10,7 +10,7 @@ def main():
     # optical_generator = OpticalGenerator()
     # test_video_path = "F:\\fsociety\\graduation_project\\Project\\TestClassifier\\Test1Package\\videos\\ofiice_video.avi"
     # flow_image_path = "F:\\fsociety\\graduation_project\\Project\\TestClassifier\\Test1Package\\videos\\flow\\"
-    # optical_generator.generate(test_video_path, flow_image_path, 20)
+    # optical_generator.generate(test_video_path, flow_image_path, 20, 224, 224)
     weight_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\weights.h5 "
     mean_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\flow_mean.mat "
     feature_extractor = FeatureExtractor(weight_path, mean_path)

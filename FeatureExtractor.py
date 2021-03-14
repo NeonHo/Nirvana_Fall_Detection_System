@@ -155,5 +155,5 @@ class FeatureExtractor:
         for i in range(flow.shape[0]):
             prediction = self.model.predict(np.expand_dims(flow[i, ...], 0))  # 进行预测。
             predictions[i, ...] = prediction  # 预测值放入列表
-        dataset_features[0 + flow.shape[0], :] = predictions
+        dataset_features[0: flow.shape[0], :] = predictions
         h5features.close()
