@@ -4,7 +4,7 @@ import cv2 as cv
 
 class OpticalGenerator:
     def __init__(self):
-        self.tvl1 = cv.DualTVL1OpticalFlow_create()
+        self.tvl1 = cv.optflow.DualTVL1OpticalFlow_create()
         pass
 
     def generate(self, avi_path, flow_save_path, bound, width, height):
@@ -17,7 +17,7 @@ class OpticalGenerator:
         :param flow_save_path: 不含图片名称的存储路径，请设定到最底层文件夹并加斜杠。
         :return:
         """
-        video_pointer = cv.VideoCapture(avi_path)  # get the video.
+        video_pointer = cv.VideoCapture(avi_path + "video.avi")  # get the video.
         ret, frame1 = video_pointer.read()  # read the first frame of the video.
         frame1 = cv.resize(frame1, (width, height))
         previous_frame = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)  # convert color BGR to gray. previous is frame1.

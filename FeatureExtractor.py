@@ -35,8 +35,8 @@ class FeatureExtractor:
         # VGG16 model from Conv1_1 to fc6 layer to extract features.
         # ========================================================================
 
-        self.ucf101_vgg16_weight_address = network_weight_path
-        self.mean_file_path = mean_file_path
+        self.ucf101_vgg16_weight_address = network_weight_path + "weights.h5"
+        self.mean_file_path = mean_file_path + "flow_mean.mat"
         self.num_features = num_features
         self.stack_length = 10  # RGB图片组成的堆栈的尺寸
         self.features_key = features_key  # 提取的H5特征文件中的键名
@@ -119,14 +119,14 @@ class FeatureExtractor:
         d = sio.loadmat(self.mean_file_path)
         flow_mean = d['image_mean']  # 用来归一化的参数
 
-        x_images = glob.glob(optical_frame_path + '\\flow_x*.jpg')  # 将每个样本文件夹中的所有光流图片全拿出来。
-        y_images = glob.glob(optical_frame_path + '\\flow_y*.jpg')
+        x_images = glob.glob(optical_frame_path + 'flow_x*.jpg')  # 将每个样本文件夹中的所有光流图片全拿出来。
+        y_images = glob.glob(optical_frame_path + 'flow_y*.jpg')
 
         nb_stacks = len(x_images) - self.stack_length + 1  # 计算共需要多少个栈
 
         # File to store the extracted features and datasets to store them
         # IMPORTANT NOTE: 'w' mode totally erases previous data
-        h5features = h5py.File(features_path + "\\features.h5", 'w')  # 完全清除特征文件中的内容重新写入
+        h5features = h5py.File(features_path + "features.h5", 'w')  # 完全清除特征文件中的内容重新写入
         # 预计在特征数据集中写入nb_total_stacks×4096个特征数据。Shape:(nb_total_stacks, 4096)
         dataset_features = h5features.create_dataset(self.features_key, shape=(nb_stacks, self.num_features),
                                                      dtype='float64')
