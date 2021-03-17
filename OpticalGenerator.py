@@ -1,40 +1,36 @@
+import threading
 import numpy as np
 import cv2 as cv
 
 
-class OpticalGenerator:
-    def __init__(self):
+class OpticalGenerator(threading.Thread):
+    def __init__(self, avi_path, flow_save_path, bound, width, height):
+        super().__init__(name="optical_flow_generator_thread")
         self.tvl1 = cv.optflow.DualTVL1OpticalFlow_create()
-        pass
+        self.avi_path = avi_path
+        self.flow_save_path = flow_save_path
+        self.bound = bound
+        self.width = width
+        self.height = height
+        self.or_start_fe = [False]  # optical_generator get enough flow images to start feature_extractor.
 
-    def generate(self, avi_path, flow_save_path, bound, width, height):
-        """
-
-        :param height:
-        :param width:
-        :param bound:
-        :param avi_path: 要输入的视频。
-        :param flow_save_path: 不含图片名称的存储路径，请设定到最底层文件夹并加斜杠。
-        :return:
-        """
-        video_pointer = cv.VideoCapture(avi_path + "video.avi")  # get the video.
+    def generate(self):
+        video_pointer = cv.VideoCapture(self.avi_path + "video.avi")  # get the video.
         ret, frame1 = video_pointer.read()  # read the first frame of the video.
-        frame1 = cv.resize(frame1, (width, height))
+        # frame1 = cv.resize(frame1, (self.width, self.height))
         previous_frame = cv.cvtColor(frame1, cv.COLOR_BGR2GRAY)  # convert color BGR to gray. previous is frame1.
-        flow_x = np.zeros_like(frame1)  # flow_x is a zero matrix with same shape of frame1
-        flow_y = np.zeros_like(frame1)  # flow_y is a zero matrix with same shape of frame1
         hsv = np.zeros_like(frame1)
         hsv[..., 1] = 255
-        cont = 0
+        count = 0
         while ret:
             ret, frame2 = video_pointer.read()  # read the next frame of the video.
             if not ret:
                 break
-            frame2 = cv.resize(frame2, (width, height))
+            # frame2 = cv.resize(frame2, (self.width, self.height))
             next_frame = cv.cvtColor(frame2, cv.COLOR_BGR2GRAY)  # convert color BGR to gray.
-            flow = self.tvl1.calc(previous_frame, next_frame, None)
+            flow = self.tvl1.calc(previous_frame, next_frame, None)  # TVL-1 is better with changing lighting conditions
             mag, ang = cv.cartToPolar(flow[..., 0], flow[..., 1])
-            flow = (flow + bound) * (255.0 / (2 * bound))
+            flow = (flow + self.bound) * (255.0 / (2 * self.bound))
             flow = np.round(flow).astype(int)
             flow[flow >= 255] = 255
             flow[flow <= 0] = 0
@@ -45,7 +41,12 @@ class OpticalGenerator:
             k = cv.waitKey(1) & 0xff
             if k == 27:  # esc key to escape.
                 break
-            cv.imwrite(flow_save_path + "flow_x_" + str(cont) + ".jpg", flow[:, :, 0])
-            cv.imwrite(flow_save_path + "flow_y_" + str(cont) + ".jpg", flow[:, :, 1])
-            cont += 1
+            cv.imwrite(self.flow_save_path + "flow_x_" + str(count) + ".jpg", flow[:, :, 0])
+            cv.imwrite(self.flow_save_path + "flow_y_" + str(count) + ".jpg", flow[:, :, 1])
+            if count == 10:
+                self.or_start_fe[0] = True
+            count += 1
             previous_frame = next_frame
+
+    def run(self) -> None:
+        self.generate()

@@ -1,7 +1,6 @@
 from __future__ import print_function
-
 import gc
-
+import threading
 import cv2
 from numpy.random import seed
 import numpy as np
@@ -25,7 +24,7 @@ def generator(list1, list2):
 
 
 class FeatureExtractor:
-    def __init__(self, network_weight_path, mean_file_path, num_features=4096, features_key='features'):
+    def __init__(self, network_weight_path, mean_file_path, optical_frame_path, features_path, num_features=4096, features_key='features'):
         """
 
         :param network_weight_path: 用于提取特征的神经网络序列模型的参数文件路径，包含文件名。
@@ -40,6 +39,8 @@ class FeatureExtractor:
         self.num_features = num_features
         self.stack_length = 10  # RGB图片组成的堆栈的尺寸
         self.features_key = features_key  # 提取的H5特征文件中的键名
+        self.optical_frame_path = optical_frame_path
+        self.features_path = features_path
 
         self.model = Sequential()  # 多个网络层的线性堆叠
 
@@ -108,25 +109,24 @@ class FeatureExtractor:
         b2 = np.asarray(b2)
         layer_dict[layer].set_weights((w2, b2))
 
-    def extract(self, optical_frame_path, features_path):
+    def extract(self, classifier):
         """
 
-        :param optical_frame_path: 光流图像所在文件路径，不包含图片名称。
-        :param features_path: 提取出的特征的文件路径，不包含H5文件名。
-        :return: None
+        :param classifier:
+        :return:
         """
         # Load the mean file to subtract to the images
         d = sio.loadmat(self.mean_file_path)
         flow_mean = d['image_mean']  # 用来归一化的参数
 
-        x_images = glob.glob(optical_frame_path + 'flow_x*.jpg')  # 将每个样本文件夹中的所有光流图片全拿出来。
-        y_images = glob.glob(optical_frame_path + 'flow_y*.jpg')
+        x_images = glob.glob(self.optical_frame_path + 'flow_x*.jpg')  # 将每个样本文件夹中的所有光流图片全拿出来。
+        y_images = glob.glob(self.optical_frame_path + 'flow_y*.jpg')
 
         nb_stacks = len(x_images) - self.stack_length + 1  # 计算共需要多少个栈
 
         # File to store the extracted features and datasets to store them
         # IMPORTANT NOTE: 'w' mode totally erases previous data
-        h5features = h5py.File(features_path + "features.h5", 'w')  # 完全清除特征文件中的内容重新写入
+        h5features = h5py.File(self.features_path + "features.h5", 'w')  # 完全清除特征文件中的内容重新写入
         # 预计在特征数据集中写入nb_total_stacks×4096个特征数据。Shape:(nb_total_stacks, 4096)
         dataset_features = h5features.create_dataset(self.features_key, shape=(nb_stacks, self.num_features),
                                                      dtype='float64')
@@ -151,9 +151,10 @@ class FeatureExtractor:
         flow = flow - np.tile(flow_mean[..., np.newaxis], (1, 1, 1, flow.shape[3]))
         flow = np.transpose(flow, (3, 0, 1, 2))
         predictions = np.zeros((flow.shape[0], self.num_features), dtype=np.float64)  # 创建预测矩阵，nb_stacks×特征数4096
-        truth = np.zeros((flow.shape[0], 1), dtype=np.float64)
         for i in range(flow.shape[0]):
             prediction = self.model.predict(np.expand_dims(flow[i, ...], 0))  # 进行预测。
+            print("成功提取第"+str(i)+"栈的光流图的特征")
+            classifier.classify_single(prediction)
             predictions[i, ...] = prediction  # 预测值放入列表
         dataset_features[0: flow.shape[0], :] = predictions
         h5features.close()
