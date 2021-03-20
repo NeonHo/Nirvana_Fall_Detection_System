@@ -1,11 +1,4 @@
-import threading
-import h5py
-import numpy as np
-from keras.layers import (Input, Conv2D, MaxPooling2D, Flatten,
-                          Activation, Dense, Dropout, ZeroPadding2D)
-from keras.layers.normalization import BatchNormalization
-from keras.models import load_model, Model
-from keras.optimizers import Adam
+from keras.models import load_model
 
 
 class Classifier:
@@ -16,24 +9,13 @@ class Classifier:
         self.features_key = features_key  # 提取的H5特征文件中的键名
         self.threshold = threshold  # 判断阈值
 
-    def classify(self):
-        h5features = h5py.File(self.features_path + "features.h5", 'r')
-        tested_features = h5features[self.features_key]
-        predicted = self.classifier.predict(tested_features)  # 输出预测向量，单元值为浮点数。
-        for i in range(len(predicted)):
-            if predicted[i] < self.threshold:
-                predicted[i] = 0  # 小于阈值则为假
-                print("第" + str(i) + "栈时，我发现您所看护的老人摔倒了！")
+    def classify_single(self, feature_input_queue):
+        while True:
+            sample_feature = feature_input_queue.get()
+            predicted = self.classifier.predict(sample_feature)
+            if predicted < self.threshold:
+                predicted = 0  # 小于阈值则为假，摔倒了。
+                print("被看护者摔倒了！！！")
             else:
-                predicted[i] = 1  # 大于阈值则为真
-        return predicted
-
-    def classify_single(self, sample_feature):
-        predicted = self.classifier.predict(sample_feature)
-        if predicted < self.threshold:
-            predicted = 0  # 小于阈值则为假，摔倒了。
-            print("我发现您所看护的老人摔倒了!!!!!!!")
-        else:
-            predicted = 1  # 大于阈值则为真，没摔到。
-            print("正常活动中。")
-        return predicted
+                predicted = 1  # 大于阈值则为真，没摔到。
+                print("正常。")

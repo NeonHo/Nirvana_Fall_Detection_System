@@ -1,15 +1,11 @@
 from __future__ import print_function
-import gc
-import threading
-import cv2
-from numpy.random import seed
-import numpy as np
-import matplotlib
 import h5py
-from keras.models import Sequential
-from keras.layers import (Conv2D, MaxPooling2D, Flatten, Dense, ZeroPadding2D)
+import matplotlib
+import numpy as np
 import scipy.io as sio
-import glob
+from keras.layers import (Conv2D, MaxPooling2D, Flatten, Dense, ZeroPadding2D)
+from keras.models import Sequential
+from numpy.random import seed
 
 seed(1)
 matplotlib.use('Agg')
@@ -24,7 +20,8 @@ def generator(list1, list2):
 
 
 class FeatureExtractor:
-    def __init__(self, network_weight_path, mean_file_path, optical_frame_path, features_path, num_features=4096, features_key='features'):
+    def __init__(self, network_weight_path, mean_file_path, optical_frame_path, features_path, width, height,
+                 num_features=4096, features_key='features'):
         """
 
         :param network_weight_path: 用于提取特征的神经网络序列模型的参数文件路径，包含文件名。
@@ -41,6 +38,11 @@ class FeatureExtractor:
         self.features_key = features_key  # 提取的H5特征文件中的键名
         self.optical_frame_path = optical_frame_path
         self.features_path = features_path
+        # the flow array will be zeros at the head
+        self.img_count = 0
+        self.width = width
+        self.height = height
+        self.flow_stack = np.zeros((self.width, self.height, 2 * self.stack_length, 1), dtype=np.float64)
 
         self.model = Sequential()  # 多个网络层的线性堆叠
 
@@ -109,52 +111,46 @@ class FeatureExtractor:
         b2 = np.asarray(b2)
         layer_dict[layer].set_weights((w2, b2))
 
-    def extract(self, classifier):
-        """
-
-        :param classifier:
-        :return:
-        """
         # Load the mean file to subtract to the images
         d = sio.loadmat(self.mean_file_path)
-        flow_mean = d['image_mean']  # 用来归一化的参数
+        self.flow_mean = d['image_mean']  # 用来归一化的参数
 
-        x_images = glob.glob(self.optical_frame_path + 'flow_x*.jpg')  # 将每个样本文件夹中的所有光流图片全拿出来。
-        y_images = glob.glob(self.optical_frame_path + 'flow_y*.jpg')
+    def add_flow_images_couple(self, img_x, img_y):
+        """
+        append img_x and img_y to the x and y flow numpy.array and update the stack size.
+        :param img_x: x 方向上的光流图像
+        :param img_y: y 方向上的光流图像
+        :return:
+        """
+        self.img_count += 1
+        if self.img_count <= self.stack_length:
+            self.flow_stack[:, :, 2 * (self.img_count - 1), 0] = img_x
+            self.flow_stack[:, :, 2 * (self.img_count - 1) + 1, 0] = img_y
+        else:
+            self.flow_stack = np.delete(self.flow_stack, 0, axis=2)
+            self.flow_stack = np.delete(self.flow_stack, 0, axis=2)
+            img_x = np.expand_dims(img_x, axis=2)
+            img_x = np.expand_dims(img_x, axis=3)
+            self.flow_stack = np.append(self.flow_stack, img_x, axis=2)
+            img_y = np.expand_dims(img_y, axis=2)
+            img_y = np.expand_dims(img_y, axis=3)
+            self.flow_stack = np.append(self.flow_stack, img_y, axis=2)
 
-        nb_stacks = len(x_images) - self.stack_length + 1  # 计算共需要多少个栈
+    def extract(self, flow_input_queue, feature_output_queue):
+        """
 
-        # File to store the extracted features and datasets to store them
-        # IMPORTANT NOTE: 'w' mode totally erases previous data
-        h5features = h5py.File(self.features_path + "features.h5", 'w')  # 完全清除特征文件中的内容重新写入
-        # 预计在特征数据集中写入nb_total_stacks×4096个特征数据。Shape:(nb_total_stacks, 4096)
-        dataset_features = h5features.create_dataset(self.features_key, shape=(nb_stacks, self.num_features),
-                                                     dtype='float64')
-
-        # Here nb_stacks optical flow stacks will be stored
-        flow = np.zeros(shape=(224, 224, 2 * self.stack_length, nb_stacks), dtype=np.float64)
-        gen = generator(x_images, y_images)
-        for i in range(len(x_images)):
-            flow_x_file, flow_y_file = next(gen)
-            img_x = cv2.imread(flow_x_file, cv2.IMREAD_GRAYSCALE)
-            img_y = cv2.imread(flow_y_file, cv2.IMREAD_GRAYSCALE)
-            # Assign an image i to the jth stack in the kth position, but also in the j+1th stack in the k+1th
-            # position and so on (for sliding window) 滑动窗口的目的是能从单个录像中密集地采样，并提取多组特征。
-            for s in list(reversed(range(min(10, i + 1)))):
-                if i - s < nb_stacks:
-                    flow[:, :, 2 * s, i - s] = img_x
-                    flow[:, :, 2 * s + 1, i - s] = img_y
-            del img_x, img_y
-            gc.collect()
-
-        # Subtract mean 减去均值，做到归一化。
-        flow = flow - np.tile(flow_mean[..., np.newaxis], (1, 1, 1, flow.shape[3]))
-        flow = np.transpose(flow, (3, 0, 1, 2))
-        predictions = np.zeros((flow.shape[0], self.num_features), dtype=np.float64)  # 创建预测矩阵，nb_stacks×特征数4096
-        for i in range(flow.shape[0]):
-            prediction = self.model.predict(np.expand_dims(flow[i, ...], 0))  # 进行预测。
-            print("成功提取第"+str(i)+"栈的光流图的特征")
-            classifier.classify_single(prediction)
-            predictions[i, ...] = prediction  # 预测值放入列表
-        dataset_features[0: flow.shape[0], :] = predictions
-        h5features.close()
+        :param feature_output_queue:
+        :param flow_input_queue:
+        :return:
+        """
+        while True:
+            flow_x, flow_y = flow_input_queue.get()
+            self.add_flow_images_couple(flow_x, flow_y)
+            # print("optical flow images:\t" + str(self.img_count) + "压入光流栈。")
+            if (self.img_count >= self.stack_length) and (self.img_count % self.stack_length == 0):
+                # Subtract mean 减去均值，做到归一化。
+                print("stack-" + str(self.img_count))
+                self.flow_stack = self.flow_stack - np.tile(self.flow_mean[..., np.newaxis], (1, 1, 1, self.flow_stack.shape[3]))
+                flow = np.transpose(self.flow_stack, (3, 0, 1, 2))
+                features = self.model.predict(np.expand_dims(flow[0, ...], 0))  # 进行预测。
+                feature_output_queue.put(features)
