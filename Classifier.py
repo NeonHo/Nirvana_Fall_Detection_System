@@ -15,7 +15,7 @@ class Classifier:
             predicted = self.classifier.predict(sample_feature)
             if predicted < self.threshold:
                 predicted = 0  # 小于阈值则为假，摔倒了。
-                print("被看护者摔倒了！！！")
+                print("被看护者摔倒了!!!!!!!!!")
             else:
                 predicted = 1  # 大于阈值则为真，没摔到。
                 print("正常。")

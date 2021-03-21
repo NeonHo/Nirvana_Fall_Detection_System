@@ -35,7 +35,7 @@ class Videographer:
                 continue  # the previous frame is None at the 1st time.
             else:
                 frame_output_queue.put((self.previous_frame, current_frame, self.captured_frame_number))
-                # print("拍摄第-"+str(self.captured_frame_number)+"张图像")
+                print("image:"+str(self.captured_frame_number))
                 self.previous_frame = current_frame
                 key = cv2.waitKey(1) & 0xff
                 if key == 27:  # esc key to escape.

@@ -6,11 +6,16 @@ import scipy.io as sio
 from keras.layers import (Conv2D, MaxPooling2D, Flatten, Dense, ZeroPadding2D)
 from keras.models import Sequential
 from numpy.random import seed
+from numba import jit
+
+# import os
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 seed(1)
 matplotlib.use('Agg')
 
 
+@jit
 def generator(list1, list2):
     """
     Auxiliary generator: returns the ith element of both given list with each call to next()
@@ -149,8 +154,9 @@ class FeatureExtractor:
             # print("optical flow images:\t" + str(self.img_count) + "压入光流栈。")
             if (self.img_count >= self.stack_length) and (self.img_count % self.stack_length == 0):
                 # Subtract mean 减去均值，做到归一化。
-                print("stack-" + str(self.img_count))
-                self.flow_stack = self.flow_stack - np.tile(self.flow_mean[..., np.newaxis], (1, 1, 1, self.flow_stack.shape[3]))
+                print("stack------------" + str(self.img_count))
+                self.flow_stack = self.flow_stack - np.tile(self.flow_mean[..., np.newaxis],
+                                                            (1, 1, 1, self.flow_stack.shape[3]))
                 flow = np.transpose(self.flow_stack, (3, 0, 1, 2))
                 features = self.model.predict(np.expand_dims(flow[0, ...], 0))  # 进行预测。
                 feature_output_queue.put(features)
