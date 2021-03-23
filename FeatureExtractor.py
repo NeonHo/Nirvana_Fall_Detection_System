@@ -6,22 +6,11 @@ import scipy.io as sio
 from keras.layers import (Conv2D, MaxPooling2D, Flatten, Dense, ZeroPadding2D)
 from keras.models import Sequential
 from numpy.random import seed
-from numba import jit
+import os
 
-# import os
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 seed(1)
 matplotlib.use('Agg')
-
-
-@jit
-def generator(list1, list2):
-    """
-    Auxiliary generator: returns the ith element of both given list with each call to next()
-    """
-    for x, y in zip(list1, list2):  # 将两个列表的对应元素组成一一对应的元组。
-        yield x, y
 
 
 class FeatureExtractor:

@@ -1,4 +1,5 @@
 from keras.models import load_model
+import winsound
 
 
 class Classifier:
@@ -8,6 +9,8 @@ class Classifier:
         self.features_path = features_path
         self.features_key = features_key  # 提取的H5特征文件中的键名
         self.threshold = threshold  # 判断阈值
+        self.duration = 500  # millisecond
+        self.freq = 500  # Hz
 
     def classify_single(self, feature_input_queue):
         while True:
@@ -15,6 +18,7 @@ class Classifier:
             predicted = self.classifier.predict(sample_feature)
             if predicted < self.threshold:
                 predicted = 0  # 小于阈值则为假，摔倒了。
+                winsound.Beep(self.freq, self.duration)
                 print("被看护者摔倒了!!!!!!!!!")
             else:
                 predicted = 1  # 大于阈值则为真，没摔到。
