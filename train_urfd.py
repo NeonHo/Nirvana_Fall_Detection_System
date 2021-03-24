@@ -18,41 +18,42 @@ from sklearn.model_selection import KFold, StratifiedShuffleSplit
 
 seed(1)
 matplotlib.use('Agg')
-os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["TF_XLA_FLAGS"] = "--tf_xla_enable_xla_devices"
+# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # CHANGE THESE VARIABLES ---
-save_plots = True  # ？？？ 是否保存训练后的Accuracy的图像。
+save_plots = True  
 
 # Set to 'True' if you want to restore a previous trained models Training is skipped and test is done
-use_checkpoint = False  # Set to True or False ？？？
+use_checkpoint = False  # Set to True or False
 # --------------------------
 
-best_model_path = 'models/'  # 训练出的模型存储的路径
-plots_folder = 'plots/'  # 训练过程中的图像的存储路径
-checkpoint_path = best_model_path + 'fold_'  # ？？？ 检查点文件的存储路径
+best_model_path = '/content/train_urfd/train_mark1/models/'
+plots_folder = '/content/train_urfd/train_mark1/plots/'
+checkpoint_path = best_model_path + 'fold_'
 
-saved_files_folder = 'saved_features/'  # URFD数据集中提取的特征和标签的存放路径
-features_file = saved_files_folder + 'features_urfd_tf.h5'  # URFD中提取的特征
-labels_file = saved_files_folder + 'labels_urfd_tf.h5'  # URFD中提取特征一一对应的标签
-features_key = 'features'  # 如果要训练自己的数据集，这些就有用，hdf5文件钟特征一栏的键名
-labels_key = 'labels'  # 如果要训练自己的数据集，这些就有用，hdf5文件钟标签一栏的键名
+saved_files_folder = '/content/train_urfd/train_mark1/saved_features/'
+features_file = saved_files_folder + 'features_urfd_tf.h5'
+labels_file = saved_files_folder + 'labels_urfd_tf.h5'
+features_key = 'features'
+labels_key = 'labels'
 
-L = 10  # RGB图片组成的堆栈的尺寸
-num_features = 4096  # 特征的数量
-batch_norm = True  # 是否需要批量归一化
-learning_rate = 0.0001  # 拟合过程中的学习率
-mini_batch_size = 64  # 最小批的尺寸
-weight_0 = 1  # 多分类问题中只有摔倒这一类有独一无二的权重
-epochs = 3000  # 世代的数量
-use_validation = False  # ？？？ 是否使用验证集
+L = 10
+num_features = 4096
+batch_norm = True
+learning_rate = 0.0001
+mini_batch_size = 64
+weight_0 = 1
+epochs = 3000
+use_validation = False
 # After the training stops, use train+validation to train for 1 epoch
-use_val_for_training = False  # ？？？ 是否使用验证集去训练
-val_size = 100  # ？？？ 验证集的数量
+use_val_for_training = False
+val_size = 100
 # Threshold to classify between positive and negative
-threshold = 0.5  # 二值分类的判别阈值，低于阈值为0，高于或等于阈值为1
+threshold = 0.5
 
-# Name of the experiment URFD_学习率_批处理尺寸_是否要批处理正则化_摔倒类的权重
+# Name of the experiment
 exp = 'urfd_lr{}_batchs{}_batchnorm{}_w0_{}'.format(learning_rate, mini_batch_size, batch_norm, weight_0)
 
 
@@ -113,7 +114,7 @@ def main():
     # ========================================================================
     # TRAINING
     # ========================================================================
-    adam = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08)  # Adam梯度下降：训练的参数：学习率；β1和β2；ε阈值，
+    adam = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
 
     h5features = h5py.File(features_file, 'r')
     h5labels = h5py.File(labels_file, 'r')
@@ -135,7 +136,7 @@ def main():
     kf_nofalls = KFold(n_splits=5, shuffle=True)
     kf_nofalls.get_n_splits(X_full[ones_full, ...])
 
-    sensitivities = []  # 评估性能用的5个参数。
+    sensitivities = []
     specificities = []
     fars = []
     mdrs = []
@@ -170,14 +171,13 @@ def main():
             _y_full[ones_full, ...][test_index_nofalls, ...]
         ))
 
-        if use_validation:  # 如果使用验证集，就将训练集和验证集分开，
+        if use_validation:
             # Create a validation subset from the training set
             zeroes = np.asarray(np.where(_y == 0)[0])
             ones = np.asarray(np.where(_y == 1)[0])
 
             zeroes.sort()
             ones.sort()
-            # 将完整的训练集作为一整份，其中50个作为验证集，剩下的都作为训练集。
             trainval_split_0 = StratifiedShuffleSplit(n_splits=1, test_size=val_size / 2, random_state=7)
             indices_0 = trainval_split_0.split(X[zeroes, ...], np.argmax(_y[zeroes, ...], 1))
             trainval_split_1 = StratifiedShuffleSplit(n_splits=1, test_size=val_size / 2, random_state=7)
@@ -190,7 +190,7 @@ def main():
                                      axis=0)
             X_val = np.concatenate([X[zeroes, ...][val_indices_0, ...], X[ones, ...][val_indices_1, ...]], axis=0)
             y_val = np.concatenate([_y[zeroes, ...][val_indices_0, ...], _y[ones, ...][val_indices_1, ...]], axis=0)
-        else:  # 不使用验证集，而是直接将整个训练集拿来训练。
+        else:
             X_train = X
             y_train = _y
 
@@ -210,13 +210,13 @@ def main():
 
         # ==================== CLASSIFIER ========================
         extracted_features = Input(shape=(num_features,), dtype='float32', name='input')
-        if batch_norm:  # 批量归一化
+        if batch_norm:
             x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(extracted_features)
             x = Activation('relu')(x)
         else:
             x = ELU(alpha=1.0)(extracted_features)
 
-        x = Dropout(0.9)(x)  # 以0.9的概率进行丢弃正则化。
+        x = Dropout(0.9)(x)
         x = Dense(4096, name='fc2', kernel_initializer='glorot_uniform')(x)
         # 4096 output units, Xavier uniform initializer
         if batch_norm:
@@ -224,17 +224,15 @@ def main():
             x = Activation('relu')(x)
         else:
             x = ELU(alpha=1.0)(x)
-        x = Dropout(0.8)(x)  # 以0.8的概率进行丢弃正则化。
+        x = Dropout(0.8)(x)
         x = Dense(1, name='predictions', kernel_initializer='glorot_uniform')(x)
         # 1 output unit, Xavier uniform initializer
         x = Activation('sigmoid')(x)  # sigmoid function.
 
         classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
-        # 分类器，输入提取的特征，输出真值判断。
         fold_best_model_path = best_model_path + 'urfd_fold_{}.h5'.format(fold_number)
-        # models/urfd_fold_1.h5 是分类器本身，我已经训练出来了。
+        # models/urfd_fold_1.h5 
         classifier.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
-        # Adam优化器， 代价函数二值交叉混合，用精确度度量。
 
         if not use_checkpoint:
             # ==================== TRAINING ========================
@@ -266,12 +264,12 @@ def main():
                 callbacks=callbacks
             )
 
-            if not use_validation:  # 如果不使用验证集。
+            if not use_validation:
                 classifier.save(fold_best_model_path)
 
             plot_training_info(plots_folder + exp, ['accuracy', 'loss'], save_plots, history.history)
 
-            if use_validation and use_val_for_training:  # 如果使用验证集去训练。
+            if use_validation and use_val_for_training:
                 classifier = load_model(fold_best_model_path)
 
                 # Use full training set (training+validation)
@@ -288,22 +286,22 @@ def main():
                     callbacks=callbacks
                 )
 
-                classifier.save(fold_best_model_path)  # 将分类器保存到fold_best_model_path中。
+                classifier.save(fold_best_model_path)
 
         # ==================== EVALUATION ========================
 
         # Load best model
         print('Model loaded from checkpoint')
-        classifier = load_model(fold_best_model_path)  # 分类器是从fold_best_model_path中加载的。
+        classifier = load_model(fold_best_model_path)
 
-        predicted = classifier.predict(np.asarray(X_test))  # 输出预测向量，单元值为浮点数。
+        predicted = classifier.predict(np.asarray(X_test))
         for i in range(len(predicted)):
             if predicted[i] < threshold:
-                predicted[i] = 0  # 小于阈值则为假
+                predicted[i] = 0
             else:
-                predicted[i] = 1  # 大于阈值则为真
+                predicted[i] = 1
         # Array of predictions 0/1
-        predicted = np.asarray(predicted).astype(int)  # 转换为整型
+        predicted = np.asarray(predicted).astype(int)
         # Compute metrics and print them
         cm = confusion_matrix(y_test, predicted, labels=[0, 1])
         tp = cm[0][0]
