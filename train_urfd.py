@@ -1,18 +1,20 @@
 from __future__ import print_function
-from numpy.random import seed
-import numpy as np
-import matplotlib
-from matplotlib import pyplot as plt
+
 import os
+
 import h5py
-from keras.models import load_model, Model, Sequential
-from keras.layers import (Input, Conv2D, MaxPooling2D, Flatten, Activation, Dense, Dropout, ZeroPadding2D)
-from keras.optimizers import Adam
-from keras.layers.normalization import BatchNormalization
+import matplotlib
+import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import (Input, Activation, Dense, Dropout)
+from keras.layers.advanced_activations import ELU
+from keras.layers.normalization import BatchNormalization
+from keras.models import load_model, Model
+from keras.optimizers import Adam
+from matplotlib import pyplot as plt
+from numpy.random import seed
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.model_selection import KFold, StratifiedShuffleSplit
-from keras.layers.advanced_activations import ELU
 
 seed(1)
 matplotlib.use('Agg')
