@@ -22,8 +22,6 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 # CHANGE THESE VARIABLES ---
-mean_file = 'flow_mean.mat'  # 归一化参数
-vgg_16_weights = 'weights.h5'  # 用UCF101训练得到的VGG-16的权重
 save_plots = True  # ？？？ 是否保存训练后的Accuracy的图像。
 
 # Set to 'True' if you want to restore a previous trained models Training is skipped and test is done
