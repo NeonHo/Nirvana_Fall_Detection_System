@@ -5,8 +5,7 @@ from threading import Lock
 
 class OpticalGenerator:
     def __init__(self, avi_path, flow_save_path, bound, width, height, stack_length):
-        self.tvl1 = cv2.optflow.DualTVL1OpticalFlow_create(nscales=1, epsilon=0.01,
-                                                           warps=1)  # set parameters to speed up.
+        self.tvl1 = cv2.optflow.DualTVL1OpticalFlow_create()  # set parameters to speed up.
         self.avi_path = avi_path
         self.flow_save_path = flow_save_path
         self.bound = bound
@@ -79,7 +78,7 @@ class OpticalGenerator:
             previous_frame = next_frame
             print("flow:" + str(cont))
 
-    def generate_optical_flow_farneback(self, avi_path, flow_output_queue_0, flow_output_queue_1):
+    def generate_optical_flow_farneback(self, avi_path, flow_output_queue_0):
         video_pointer = cv2.VideoCapture(avi_path)  # get the video.
         ret, frame1 = video_pointer.read()  # read the first frame of the video.
         frame1 = cv2.resize(frame1, (self.width, self.height))
@@ -107,9 +106,10 @@ class OpticalGenerator:
             if k == 27:  # esc key to escape.
                 break
             count += 1
-            if count % (self.stack_length * 2) <= self.stack_length:
-                flow_output_queue_1.put((flow[:, :, 0], flow[:, :, 1]))  # 01-10, 21-30, 41-50...
-            else:
-                flow_output_queue_0.put((flow[:, :, 0], flow[:, :, 1]))  # 11-20, 31-40, 51-60...
+            flow_output_queue_0.put((flow[:, :, 0], flow[:, :, 1]))
+            # if count % (self.stack_length * 2) <= self.stack_length:
+            #     flow_output_queue_1.put((flow[:, :, 0], flow[:, :, 1]))  # 01-10, 21-30, 41-50...
+            # else:
+            #     flow_output_queue_0.put((flow[:, :, 0], flow[:, :, 1]))  # 11-20, 31-40, 51-60...
             previous_frame = next_frame
             print("flow:" + str(count))
