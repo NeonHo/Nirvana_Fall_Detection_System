@@ -5,7 +5,7 @@ from threading import Lock
 
 class OpticalGenerator:
     def __init__(self, avi_path, flow_save_path, bound, width, height, stack_length):
-        self.tvl1 = cv2.optflow.DualTVL1OpticalFlow_create()  # set parameters to speed up.
+        self.tvl1 = cv2.optflow.DualTVL1OpticalFlow_create(nscales=1, epsilon=0.05, warps=1)  # set parameters to speed up.
         self.avi_path = avi_path
         self.flow_save_path = flow_save_path
         self.bound = bound

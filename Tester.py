@@ -34,7 +34,7 @@ class Tester:
         flow_queue_0 = Queue(1)
         # flow_queue_1 = Queue(1)
         feature_queue = Queue()
-        avi_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\test_ground\\video_nofall.avi"
+        avi_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\test_ground\\office_fall.avi"
         # Thread(target=self.videographer.capture_video, args=(frame_queue,)).start()
         Thread(target=self.optical_generator.generate_optical_flow_tvl1, args=(avi_path, flow_queue_0)).start()
         Thread(target=self.feature_extractor_0.extract, args=(flow_queue_0, feature_queue,)).start()

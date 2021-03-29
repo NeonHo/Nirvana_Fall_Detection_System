@@ -9,7 +9,7 @@ class Classifier:
         self.features_path = features_path
         self.features_key = features_key  # 提取的H5特征文件中的键名
         self.threshold = threshold  # 判断阈值
-        self.duration = 500  # millisecond
+        self.duration = 1000  # millisecond
         self.freq = 500  # Hz
 
     def classify_single(self, feature_input_queue):
