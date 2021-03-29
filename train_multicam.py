@@ -148,8 +148,7 @@ def main():
     # ========================================================================
     # TRAINING
     # =======================================================================
-    adam = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999,
-                epsilon=1e-08, decay=0.0005)
+    adam = Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0005)
 
     cams_x, cams_y = load_dataset()
 
@@ -169,35 +168,23 @@ def main():
         train_x = cams_x[0:cam] + cams_x[cam + 1:]
         train_y = cams_y[0:cam] + cams_y[cam + 1:]
         # Flatten to 1D arrays
-        train_x = np.asarray([train_x[i][j]
-                              for i in range(len(train_x)) for j in range(len(train_x[i]))])
-        train_y = np.asarray([train_y[i][j]
-                              for i in range(len(train_y)) for j in range(len(train_y[i]))])
+        train_x = np.asarray([train_x[i][j] for i in range(len(train_x)) for j in range(len(train_x[i]))])
+        train_y = np.asarray([train_y[i][j] for i in range(len(train_y)) for j in range(len(train_y[i]))])
 
         # Create a validation subset from the training set
         zeroes = np.asarray(np.where(train_y == 0)[0])
         ones = np.asarray(np.where(train_y == 1)[0])
-        trainval_split_0 = StratifiedShuffleSplit(n_splits=1,
-                                                  test_size=val_size / 2,
-                                                  random_state=7)
-        indices_0 = trainval_split_0.split(train_x[zeroes, ...],
-                                           np.argmax(train_y[zeroes, ...], 1))
-        trainval_split_1 = StratifiedShuffleSplit(n_splits=1,
-                                                  test_size=val_size / 2,
-                                                  random_state=7)
-        indices_1 = trainval_split_1.split(train_x[ones, ...],
-                                           np.argmax(train_y[ones, ...], 1))
+        trainval_split_0 = StratifiedShuffleSplit(n_splits=1, test_size=val_size / 2, random_state=7)
+        indices_0 = trainval_split_0.split(train_x[zeroes, ...], np.argmax(train_y[zeroes, ...], 1))
+        trainval_split_1 = StratifiedShuffleSplit(n_splits=1, test_size=val_size / 2, random_state=7)
+        indices_1 = trainval_split_1.split(train_x[ones, ...], np.argmax(train_y[ones, ...], 1))
         train_indices_0, val_indices_0 = indices_0.next()
         train_indices_1, val_indices_1 = indices_1.next()
 
-        _X_train = np.concatenate(
-            [train_x[zeroes, ...][train_indices_0, ...], train_x[ones, ...][train_indices_1, ...]], axis=0)
-        _y_train = np.concatenate(
-            [train_y[zeroes, ...][train_indices_0, ...], train_y[ones, ...][train_indices_1, ...]], axis=0)
-        X_val = np.concatenate([train_x[zeroes, ...][val_indices_0, ...], train_x[ones, ...][val_indices_1, ...]],
-                               axis=0)
-        y_val = np.concatenate([train_y[zeroes, ...][val_indices_0, ...], train_y[ones, ...][val_indices_1, ...]],
-                               axis=0)
+        _X_train = np.concatenate([train_x[zeroes, ...][train_indices_0, ...], train_x[ones, ...][train_indices_1, ...]], axis=0)
+        _y_train = np.concatenate([train_y[zeroes, ...][train_indices_0, ...], train_y[ones, ...][train_indices_1, ...]], axis=0)
+        X_val = np.concatenate([train_x[zeroes, ...][val_indices_0, ...], train_x[ones, ...][val_indices_1, ...]], axis=0)
+        y_val = np.concatenate([train_y[zeroes, ...][val_indices_0, ...], train_y[ones, ...][val_indices_1, ...]], axis=0)
         y_val = np.squeeze(y_val)
         _y_train = np.squeeze(np.asarray(_y_train))
 
@@ -213,11 +200,9 @@ def main():
         y_test = np.asarray(test_y)
 
         # ==================== CLASSIFIER ========================
-        extracted_features = Input(shape=(num_features,),
-                                   dtype='float32', name='input')
+        extracted_features = Input(shape=(num_features,), dtype='float32', name='input')
         if batch_norm:
-            x = BatchNormalization(axis=-1, momentum=0.99,
-                                   epsilon=0.001)(extracted_features)
+            x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(extracted_features)
             x = Activation('relu')(x)
         else:
             x = ELU(alpha=1.0)(extracted_features)
@@ -233,12 +218,9 @@ def main():
         x = Dense(1, name='predictions', init='glorot_uniform')(x)
         x = Activation('sigmoid')(x)
 
-        classifier = Model(input=extracted_features,
-                           output=x, name='classifier')
-        fold_best_model_path = best_model_path + 'multicam_fold_{}'.format(
-            cam)
-        classifier.compile(optimizer=adam, loss='binary_crossentropy',
-                           metrics=['accuracy'])
+        classifier = Model(input=extracted_features, output=x, name='classifier')
+        fold_best_model_path = best_model_path + 'multicam_fold_{}'.format(cam)
+        classifier.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
 
         if not use_checkpoint:
             # ==================== TRAINING ========================
@@ -250,11 +232,8 @@ def main():
             if use_validation:
                 # callback definition
                 metric = 'val_loss'
-                e = EarlyStopping(monitor=metric, min_delta=0, patience=100,
-                                  mode='auto')
-                c = ModelCheckpoint(fold_best_model_path, monitor=metric,
-                                    save_best_only=True,
-                                    save_weights_only=False, mode='auto')
+                e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
+                c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=False, mode='auto')
                 callbacks = [e, c]
             validation_data = None
             if use_validation:
@@ -276,8 +255,7 @@ def main():
             if not use_validation:
                 classifier.save(fold_best_model_path)
 
-            plot_training_info(plots_folder + exp, ['accuracy', 'loss'],
-                               save_plots, history.history)
+            plot_training_info(plots_folder + exp, ['accuracy', 'loss'], save_plots, history.history)
 
             if use_validation and use_val_for_training:
                 classifier = load_model(fold_best_model_path)
@@ -299,7 +277,6 @@ def main():
                 classifier.save(fold_best_model_path)
 
         # ==================== EVALUATION ========================
-
         # Load best model
         print('Model loaded from checkpoint')
         classifier = load_model(fold_best_model_path)
