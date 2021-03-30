@@ -14,8 +14,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.model_selection import KFold
 
 seed(1)
-matplotlib.use('Agg')
-# os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+# os.environ["TF_XLA_FLAGS"] = "XLA_FLAGS"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # CHANGE THESE VARIABLES ---
@@ -27,20 +27,20 @@ save_plots = True
 use_checkpoint = False
 # --------------------------
 
-best_model_path = 'models/'
-plots_folder = 'plots/'
+best_model_path = '/content/models/'
+plots_folder = '/content/plots/'
 checkpoint_path = best_model_path + 'fold_'
 
-saved_files_folder = 'saved_features/'
+saved_files_folder = '/content/drive/MyDrive/train/saved_features/'
 features_file = {
     'urfd': saved_files_folder + 'features_urfd_tf.h5',
-    'multicam': saved_files_folder + 'features_multicam_tf.h5',
-    'fdd': saved_files_folder + 'features_fdd_tf.h5',
+    'multicam': saved_files_folder + 'features_multicam.h5',
+    'fdd': saved_files_folder + 'features_fdd.h5',
 }
 labels_file = {
     'urfd': saved_files_folder + 'labels_urfd_tf.h5',
-    'multicam': saved_files_folder + 'labels_multicam_tf.h5',
-    'fdd': saved_files_folder + 'labels_fdd_tf.h5',
+    'multicam': saved_files_folder + 'labels_multicam.h5',
+    'fdd': saved_files_folder + 'labels_fdd.h5',
 }
 features_key = 'features'
 labels_key = 'labels'
