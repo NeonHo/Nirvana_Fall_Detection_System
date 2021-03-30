@@ -1,30 +1,20 @@
 from __future__ import print_function
 from numpy.random import seed
-
-seed(1)
 import numpy as np
 import matplotlib
-
-matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 import os
 import h5py
-import scipy.io as sio
-import cv2
-import glob
-import gc
-
-from keras.models import load_model, Model, Sequential
-from keras.layers import (Input, Conv2D, MaxPooling2D, Flatten,
-                          Activation, Dense, Dropout, ZeroPadding2D)
+from keras.models import load_model, Model
+from keras.layers import (Input, Activation, Dense, Dropout)
 from keras.optimizers import Adam
 from keras.layers.normalization import BatchNormalization
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras import backend as K
 from sklearn.metrics import confusion_matrix, accuracy_score
-from sklearn.model_selection import KFold, StratifiedShuffleSplit
-from keras.layers.advanced_activations import ELU
+from sklearn.model_selection import KFold
 
+seed(1)
+matplotlib.use('Agg')
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
