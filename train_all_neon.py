@@ -1,14 +1,16 @@
 from __future__ import print_function
-from numpy.random import seed
-import numpy as np
-from matplotlib import pyplot as plt
+
 import os
+
 import h5py
-from keras.models import load_model, Model
-from keras.layers import (Input, Activation, Dense, Dropout)
-from keras.optimizers import Adam
-from keras.layers.normalization import BatchNormalization
+import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import (Input, Activation, Dense, Dropout)
+from keras.layers.normalization import BatchNormalization
+from keras.models import Model
+from keras.optimizers import Adam
+from matplotlib import pyplot as plt
+from numpy.random import seed
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.model_selection import KFold
 
@@ -48,10 +50,10 @@ L = 10
 num_features = 4096
 batch_norm = True
 learning_rate = 0.01
-mini_batch_size = 2048
+mini_batch_size = 32
 weight_0 = 2
 epochs = 1000
-use_validation = True
+use_validation = False
 # After the training stops, use train+validation to train for 1 epoch
 use_val_for_training = False
 val_size = 200
@@ -69,8 +71,8 @@ h5labels_urfd = h5py.File(labels_file['urfd'], 'r')
 h5features_fdd = h5py.File(features_file['fdd'], 'r')
 h5labels_fdd = h5py.File(labels_file['fdd'], 'r')
 kfold = KFold(n_splits=5, shuffle=True)
-k_fold0_stages = None
-k_fold1_stages = None
+k_fold0_stages_3list = [None, None, None]
+k_fold1_stages_3list = [None, None, None]
 k_fold0_ur = None
 k_fold1_ur = None
 k_fold0_fdd = None
@@ -171,20 +173,21 @@ def divide_train_val(zeroes, ones, validation_size):
     return train_indices_0, train_indices_1, val_indices_0, val_indices_1
 
 
-def train_multiple_cameras(classifier, stage_head, stage_tail, fold_index, fold_best_model_path, limit_size=False):
+def train_multiple_cameras(classifier, class_weight, callbacks, stage_head, stage_tail, fold_index, limit_size=False):
     """
     cut out the multiple cameras dataset from stage_head to stage tail,
     and if we use limit_size, take out samples with specific size to train.
+    :param callbacks:
+    :param class_weight:
     :param classifier:
     :param fold_index:
-    :param fold_best_model_path:
     :param stage_head: int
     :param stage_tail: int
     :param limit_size: bool
     :return:
     """
-    global k_fold0_stages
-    global k_fold1_stages
+    global k_fold0_stages_3list
+    global k_fold1_stages_3list
     global y_test_list
     global x_test_list
     global size
@@ -212,14 +215,32 @@ def train_multiple_cameras(classifier, stage_head, stage_tail, fold_index, fold_
         all0_stages = np.random.choice(all0_stages, size, replace=False)
         all1_stages = np.random.choice(all1_stages, size, replace=False)
     # Use a 5 fold cross-validation
-    if fold_index == 0:
-        # At first time, we split the dataset.
-        k_fold0_stages = kfold.split(all0_stages)
-        k_fold1_stages = kfold.split(all1_stages)
+    _train0_stages = None
+    _test0_stages = None
+    _train1_stages = None
+    _test1_stages = None
+
+    if stage_head == 1:
+        if fold_index == 0:
+            # At first time, we split the dataset.
+            k_fold0_stages_3list[0] = kfold.split(all0_stages)
+            k_fold1_stages_3list[0] = kfold.split(all1_stages)
+        _train0_stages, _test0_stages = next(k_fold0_stages_3list[0])
+        _train1_stages, _test1_stages = next(k_fold1_stages_3list[0])
+    elif stage_head == 11:
+        if fold_index == 0:
+            k_fold0_stages_3list[1] = kfold.split(all0_stages)
+            k_fold1_stages_3list[1] = kfold.split(all1_stages)
+        _train0_stages, _test0_stages = next(k_fold0_stages_3list[1])
+        _train1_stages, _test1_stages = next(k_fold1_stages_3list[1])
+    else:
+        if fold_index == 0:
+            k_fold0_stages_3list[2] = kfold.split(all0_stages)
+            k_fold1_stages_3list[2] = kfold.split(all1_stages)
+        _train0_stages, _test0_stages = next(k_fold0_stages_3list[2])
+        _train1_stages, _test1_stages = next(k_fold1_stages_3list[2])
     # CROSS-VALIDATION: Stratified partition of the dataset into train/test sets
     # Get the train and test indices, then get the actual indices
-    _train0_stages, _test0_stages = k_fold0_stages.__next__()
-    _train1_stages, _test1_stages = k_fold1_stages.__next__()
     train0_stages = all0_stages[_train0_stages]
     train1_stages = all1_stages[_train1_stages]
     test0_stages = all0_stages[_test0_stages]
@@ -240,17 +261,8 @@ def train_multiple_cameras(classifier, stage_head, stage_tail, fold_index, fold_
     x_test_stages, y_test_stages = sample_from_dataset(x_stages, y_stages, test0_stages, test1_stages)
     x_test_list.append(x_test_stages)
     y_test_list.append(y_test_stages)
+
     # Training
-    # weighting of each class: only the fall class gets a different weight
-    class_weight = {0: weight_0, 1: 1}
-    callbacks = None
-    if use_validation:
-        # callback definition
-        metric = 'val_loss'
-        e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
-        c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=False,
-                            mode='auto')
-        callbacks = [e, c]
     validation_data = None
     if use_validation:
         validation_data = (x_val_stages, y_val_stages)
@@ -268,34 +280,16 @@ def train_multiple_cameras(classifier, stage_head, stage_tail, fold_index, fold_
         callbacks=callbacks
     )
 
-    if not use_validation:
-        classifier.save(fold_best_model_path)
     plot_training_info(plots_folder + exp + '_multiple_cameras' + str(stage_head) + '-' + str(stage_tail),
                        ['accuracy', 'loss'], save_plots, history.history)
-
-    if use_validation and use_val_for_training:
-        classifier = load_model(fold_best_model_path)
-        x_train_stages = np.concatenate((x_train_stages, x_val_stages), axis=0)
-        y_train_stages = np.concatenate((y_train_stages, y_val_stages), axis=0)
-        classifier.fit(
-            x_train_stages,
-            y_train_stages,
-            validation_data=validation_data,
-            batch_size=_mini_batch_size,
-            epochs=epochs,
-            shuffle='batch',
-            class_weight=class_weight,
-            callbacks=callbacks
-        )
-        classifier.save(fold_best_model_path)
 
     # delete
     del _train0_stages
     del _train1_stages
     del train0_stages
     del train1_stages
-    del val0_stages
-    del val1_stages
+    # del val0_stages
+    # del val1_stages
     del all1_stages
     del all0_stages
     del _x_stages
@@ -304,12 +298,12 @@ def train_multiple_cameras(classifier, stage_head, stage_tail, fold_index, fold_
     del y_stages
     del x_train_stages
     del y_train_stages
-    del x_val_stages
-    del y_val_stages
-    del validation_data
+    # del x_val_stages
+    # del y_val_stages
+    # del validation_data
 
 
-def train_ur_fall(classifier, fold_index, fold_best_model_path, limit_size=False):
+def train_ur_fall(classifier, class_weight, callbacks, fold_index, limit_size=False):
     global k_fold0_ur
     global k_fold1_ur
     global x_test_list
@@ -332,8 +326,8 @@ def train_ur_fall(classifier, fold_index, fold_best_model_path, limit_size=False
         k_fold0_ur = kfold.split(all0_ur)
         k_fold1_ur = kfold.split(all1_ur)
     # CROSS-VALIDATION: Stratified partition of the dataset into train/test sets
-    _train0_ur, _test0_ur = k_fold0_ur.__next__()
-    _train1_ur, _test1_ur = k_fold1_ur.__next__()
+    _train0_ur, _test0_ur = next(k_fold0_ur)
+    _train1_ur, _test1_ur = next(k_fold1_ur)
     train0_ur = all0_ur[_train0_ur]
     train1_ur = all1_ur[_train1_ur]
     test0_ur = all0_ur[_test0_ur]
@@ -354,17 +348,8 @@ def train_ur_fall(classifier, fold_index, fold_best_model_path, limit_size=False
 
     x_test_list.append(x_test_ur)
     y_test_list.append(y_test_ur)
+
     # Training
-    # weighting of each class: only the fall class gets a different weight
-    class_weight = {0: weight_0, 1: 1}
-    callbacks = None
-    if use_validation:
-        # callback definition
-        metric = 'val_loss'
-        e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
-        c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=False,
-                            mode='auto')
-        callbacks = [e, c]
     validation_data = None
     if use_validation:
         validation_data = (x_val_ur, y_val_ur)
@@ -384,50 +369,27 @@ def train_ur_fall(classifier, fold_index, fold_best_model_path, limit_size=False
         callbacks=callbacks
     )
 
-    if not use_validation:
-        classifier.save(fold_best_model_path)
-
     plot_training_info(plots_folder + exp + '_ur_fall', ['accuracy', 'loss'], save_plots, history.history)
-
-    if use_validation and use_val_for_training:
-        classifier = load_model(fold_best_model_path)
-
-        # Use full training set (training+validation)
-        x_train_ur = np.concatenate((x_train_ur, x_val_ur), axis=0)
-        y_train_ur = np.concatenate((y_train_ur, y_val_ur), axis=0)
-
-        classifier.fit(
-            x_train_ur,
-            y_train_ur,
-            validation_data=validation_data,
-            batch_size=_mini_batch_size,
-            epochs=epochs,
-            shuffle='batch',
-            class_weight=class_weight,
-            callbacks=callbacks
-        )
-
-        classifier.save(fold_best_model_path)
 
     # delete
     del _train0_ur
     del _train1_ur
     del train0_ur
     del train1_ur
-    del val0_ur
-    del val1_ur
+    # del val0_ur
+    # del val1_ur
     del all1_ur
     del all0_ur
     del x_ur
     del y_ur
     del x_train_ur
     del y_train_ur
-    del x_val_ur
-    del y_val_ur
-    del validation_data
+    # del x_val_ur
+    # del y_val_ur
+    # del validation_data
 
 
-def train_fall_detection(classifier, fold_index, fold_best_model_path, limit_size=False):
+def train_fall_detection(classifier, class_weight, callbacks, fold_index, limit_size=False):
     global k_fold0_fdd
     global k_fold1_fdd
     global x_test_list
@@ -450,8 +412,8 @@ def train_fall_detection(classifier, fold_index, fold_best_model_path, limit_siz
         k_fold0_fdd = kfold.split(all0_fdd)
         k_fold1_fdd = kfold.split(all1_fdd)
     # CROSS-VALIDATION: Stratified partition of the dataset into train/test sets
-    _train0_fdd, _test0_fdd = k_fold0_fdd.__next__()
-    _train1_fdd, _test1_fdd = k_fold1_fdd.__next__()
+    _train0_fdd, _test0_fdd = next(k_fold0_fdd)
+    _train1_fdd, _test1_fdd = next(k_fold1_fdd)
     train0_fdd = all0_fdd[_train0_fdd]
     train1_fdd = all1_fdd[_train1_fdd]
     test0_fdd = all0_fdd[_test0_fdd]
@@ -471,17 +433,8 @@ def train_fall_detection(classifier, fold_index, fold_best_model_path, limit_siz
     x_test_fdd, y_test_fdd = sample_from_dataset(x_fdd, y_fdd, test0_fdd, test1_fdd)
     x_test_list.append(x_test_fdd)
     y_test_list.append(y_test_fdd)
+
     # Training
-    # weighting of each class: only the fall class gets a different weight
-    class_weight = {0: weight_0, 1: 1}
-    callbacks = None
-    if use_validation:
-        # callback definition
-        metric = 'val_loss'
-        e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
-        c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=False,
-                            mode='auto')
-        callbacks = [e, c]
     validation_data = None
     if use_validation:
         validation_data = (x_val_fdd, y_val_fdd)
@@ -501,47 +454,24 @@ def train_fall_detection(classifier, fold_index, fold_best_model_path, limit_siz
         callbacks=callbacks
     )
 
-    if not use_validation:
-        classifier.save(fold_best_model_path)
-
     plot_training_info(plots_folder + exp + '_fall_detection', ['accuracy', 'loss'], save_plots, history.history)
-
-    if use_validation and use_val_for_training:
-        classifier = load_model(fold_best_model_path)
-
-        # Use full training set (training+validation)
-        x_train_fdd = np.concatenate((x_train_fdd, x_val_fdd), axis=0)
-        y_train_fdd = np.concatenate((y_train_fdd, y_val_fdd), axis=0)
-
-        classifier.fit(
-            x_train_fdd,
-            y_train_fdd,
-            validation_data=validation_data,
-            batch_size=_mini_batch_size,
-            epochs=epochs,
-            shuffle='batch',
-            class_weight=class_weight,
-            callbacks=callbacks
-        )
-
-        classifier.save(fold_best_model_path)
 
     # delete
     del _train0_fdd
     del _train1_fdd
     del train0_fdd
     del train1_fdd
-    del val0_fdd
-    del val1_fdd
+    # del val0_fdd
+    # del val1_fdd
     del all1_fdd
     del all0_fdd
     del x_fdd
     del y_fdd
     del x_train_fdd
     del y_train_fdd
-    del x_val_fdd
-    del y_val_fdd
-    del validation_data
+    # del x_val_fdd
+    # del y_val_fdd
+    # del validation_data
 
 
 def main():
@@ -566,36 +496,39 @@ def main():
         x = Dropout(0.8)(x)
         x = Dense(1, name='predictions', kernel_initializer='glorot_uniform')(x)
         x = Activation('sigmoid')(x)
+
         classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
         fold_best_model_path = best_model_path + 'combined_fold_{}.h5'.format(fold)
         classifier.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
 
-        # train multiple cameras dataset from 1st stage to 10th stage.
-        train_ur_fall(classifier, fold, fold_best_model_path, limit_size=True)
-        if os.path.exists(fold_best_model_path):
-            classifier = load_model(fold_best_model_path)
-            os.remove(fold_best_model_path)
-        train_multiple_cameras(classifier, 1, 10, fold, fold_best_model_path, limit_size=True)
-        if os.path.exists(fold_best_model_path):
-            classifier = load_model(fold_best_model_path)
-            os.remove(fold_best_model_path)
-        train_multiple_cameras(classifier, 11, 20, fold, fold_best_model_path, limit_size=True)
-        if os.path.exists(fold_best_model_path):
-            classifier = load_model(fold_best_model_path)
-            os.remove(fold_best_model_path)
-        train_multiple_cameras(classifier, 21, 25, fold, fold_best_model_path, limit_size=True)
-        if os.path.exists(fold_best_model_path):
-            classifier = load_model(fold_best_model_path)
-            os.remove(fold_best_model_path)
-        train_fall_detection(classifier, fold, fold_best_model_path, limit_size=True)
+        # weighting of each class: only the fall class gets a different weight
+        class_weight = {0: weight_0, 1: 1}
+        callbacks = None
+        if use_validation:
+            # callback definition
+            metric = 'val_accuracy'
+            e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
+            c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=True,
+                                mode='auto')
+            callbacks = [e, c]
 
+        # train multiple cameras dataset from 1st stage to 10th stage.
+        train_ur_fall(classifier, class_weight, callbacks, fold, limit_size=True)
+        train_multiple_cameras(classifier, class_weight, callbacks, 1, 10, fold, limit_size=True)
+        train_multiple_cameras(classifier, class_weight, callbacks, 11, 20, fold, limit_size=True)
+        train_multiple_cameras(classifier, class_weight, callbacks, 21, 25, fold, limit_size=True)
+        train_fall_detection(classifier, class_weight, callbacks, fold, limit_size=True)
+
+        if not use_validation:
+            classifier.save_weights(fold_best_model_path)
         # EVALUATION
-        classifier = load_model(fold_best_model_path)
+        classifier.load_weights(fold_best_model_path)
         x_test = np.concatenate((x_test_list[0], x_test_list[1], x_test_list[2], x_test_list[3], x_test_list[4]),
                                 axis=0)
         y_test = np.concatenate((y_test_list[0], y_test_list[1], y_test_list[2], y_test_list[3], y_test_list[4]),
                                 axis=0)
         predicted = classifier.predict(x_test)
+
         for i in range(len(predicted)):
             if predicted[i] < threshold:
                 predicted[i] = 0
