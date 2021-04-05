@@ -5,7 +5,7 @@ import winsound
 class Classifier:
     def __init__(self, fold_best_model_path, features_path, features_key='features', threshold=0.5):
         # Classifier Adam to predict fall.
-        self.classifier = load_model(fold_best_model_path + "urfd_fold_3.h5")  # 分类器是从fold_best_model_path中加载的。
+        self.classifier(fold_best_model_path + "combined_fold_4.h5")  # 分类器是从fold_best_model_path中加载的。
         self.features_path = features_path
         self.features_key = features_key  # 提取的H5特征文件中的键名
         self.threshold = threshold  # 判断阈值
