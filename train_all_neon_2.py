@@ -49,13 +49,13 @@ L = 10
 num_features = 4096
 batch_norm = True
 learning_rate = 0.001
-mini_batch_size = 256
+mini_batch_size = 512
 weight_0 = 2
 epochs = 2000
 use_validation = True
 # After the training stops, use train+validation to train for 1 epoch
 use_val_for_training = False
-val_size = 200
+val_size = 320
 # Threshold to classify between positive and negative
 threshold = 0.5
 
@@ -316,17 +316,17 @@ def main():
         if use_validation:
             # stages
             (train0_stages, train1_stages, val0_stages, val1_stages) = divide_train_val(train0_stages, train1_stages,
-                                                                                        val_size // 3)
+                                                                                        (val_size // 5) * 3)
             val_index = np.concatenate((val0_stages, val1_stages))
             x_val_stages = x_stages[val_index]
             y_val_stages = y_stages[val_index]
             # ur
-            (train0_ur, train1_ur, val0_ur, val1_ur) = divide_train_val(train0_ur, train1_ur, val_size // 3)
+            (train0_ur, train1_ur, val0_ur, val1_ur) = divide_train_val(train0_ur, train1_ur, val_size // 5)
             val_index = np.concatenate((val0_ur, val1_ur))
             x_val_ur = x_ur[val_index]
             y_val_ur = y_ur[val_index]
             # fdd
-            (train0_fdd, train1_fdd, val0_fdd, val1_fdd) = divide_train_val(train0_fdd, train1_fdd, val_size // 3)
+            (train0_fdd, train1_fdd, val0_fdd, val1_fdd) = divide_train_val(train0_fdd, train1_fdd, val_size // 5)
             val_index = np.concatenate((val0_fdd, val1_fdd))
             x_val_fdd = x_fdd[val_index]
             y_val_fdd = y_fdd[val_index]
@@ -358,12 +358,12 @@ def main():
         x = Activation('relu')(x)
         # hidden layer
         x = Dropout(0.2)(x)
-        x = Dense(3072, name='fc2', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.01))(x)
+        x = Dense(3072, name='fc2', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.1))(x)
         x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
         x = Activation('relu')(x)
         # output layer
         x = Dropout(0.2)(x)
-        x = Dense(1, name='predictions', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.01))(x)
+        x = Dense(1, name='predictions', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.1))(x)
         x = Activation('sigmoid')(x)
 
         classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
@@ -395,7 +395,7 @@ def main():
                 validation_data=validation_data,
                 batch_size=_mini_batch_size,
                 epochs=epochs,
-                shuffle='batch',
+                shuffle=True,
                 class_weight=class_weight,
                 callbacks=callbacks
             )
