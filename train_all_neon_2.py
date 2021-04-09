@@ -55,7 +55,7 @@ epochs = 2000
 use_validation = True
 # After the training stops, use train+validation to train for 1 epoch
 use_val_for_training = False
-val_size = 320
+val_size = 396
 # Threshold to classify between positive and negative
 threshold = 0.5
 
@@ -194,7 +194,7 @@ def reload_multiple_cameras_dataset(stage_head, stage_tail, limit_size=False):
     all1_stages = np.asarray(np.where(y_stages == 1)[0])
     # Step 2 under-sample
     if limit_size:
-        temp_size = (size // 24) * (stage_tail - stage_head) * 3
+        temp_size = (size // 24) * (stage_tail - stage_head) * 4
         all0_stages = np.random.choice(all0_stages, temp_size, replace=False)
         all1_stages = np.random.choice(all1_stages, temp_size, replace=False)
         x_stages, y_stages = sample_from_dataset(x_stages, y_stages, all0_stages, all1_stages)
@@ -316,17 +316,17 @@ def main():
         if use_validation:
             # stages
             (train0_stages, train1_stages, val0_stages, val1_stages) = divide_train_val(train0_stages, train1_stages,
-                                                                                        (val_size // 5) * 3)
+                                                                                        (val_size // 6) * 4)
             val_index = np.concatenate((val0_stages, val1_stages))
             x_val_stages = x_stages[val_index]
             y_val_stages = y_stages[val_index]
             # ur
-            (train0_ur, train1_ur, val0_ur, val1_ur) = divide_train_val(train0_ur, train1_ur, val_size // 5)
+            (train0_ur, train1_ur, val0_ur, val1_ur) = divide_train_val(train0_ur, train1_ur, val_size // 6)
             val_index = np.concatenate((val0_ur, val1_ur))
             x_val_ur = x_ur[val_index]
             y_val_ur = y_ur[val_index]
             # fdd
-            (train0_fdd, train1_fdd, val0_fdd, val1_fdd) = divide_train_val(train0_fdd, train1_fdd, val_size // 5)
+            (train0_fdd, train1_fdd, val0_fdd, val1_fdd) = divide_train_val(train0_fdd, train1_fdd, val_size // 6)
             val_index = np.concatenate((val0_fdd, val1_fdd))
             x_val_fdd = x_fdd[val_index]
             y_val_fdd = y_fdd[val_index]
@@ -402,7 +402,8 @@ def main():
             if not use_validation:
                 classifier.save_weights(fold_best_model_path)
 
-            plot_training_info(plots_folder + exp, ['accuracy', 'loss'], save_plots, history.history)
+            plot_training_info(plots_folder + exp + '_fold' + str(fold), ['accuracy', 'loss'], save_plots,
+                               history.history)
 
         # evaluation
         print('Model loaded from checkpoint.')
