@@ -30,8 +30,8 @@ use_checkpoint = False
 best_model_path = '/content/models/'
 plots_folder = '/content/plots/'
 checkpoint_path = best_model_path + 'fold_'
-# '/content/drive/MyDrive/train/saved_features/'
-saved_files_folder = 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
+# 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
+saved_files_folder = '/content/drive/MyDrive/train/saved_features/'
 features_file = {
     'urfd': saved_files_folder + 'features_urfd_tf.h5',
     'multicam': saved_files_folder + 'features_multicam.h5',
@@ -48,14 +48,14 @@ labels_key = 'labels'
 L = 10
 num_features = 4096
 batch_norm = True
-learning_rate = 0.001
+learning_rate = 0.002
 mini_batch_size = 512
 weight_0 = 2
 epochs = 2000
 use_validation = True
 # After the training stops, use train+validation to train for 1 epoch
 use_val_for_training = False
-val_size = 396
+val_size = 528
 # Threshold to classify between positive and negative
 threshold = 0.5
 
@@ -194,7 +194,7 @@ def reload_multiple_cameras_dataset(stage_head, stage_tail, limit_size=False):
     all1_stages = np.asarray(np.where(y_stages == 1)[0])
     # Step 2 under-sample
     if limit_size:
-        temp_size = (size // 24) * (stage_tail - stage_head) * 4
+        temp_size = (size // 24) * (stage_tail - stage_head) * 6
         all0_stages = np.random.choice(all0_stages, temp_size, replace=False)
         all1_stages = np.random.choice(all1_stages, temp_size, replace=False)
         x_stages, y_stages = sample_from_dataset(x_stages, y_stages, all0_stages, all1_stages)
@@ -316,17 +316,17 @@ def main():
         if use_validation:
             # stages
             (train0_stages, train1_stages, val0_stages, val1_stages) = divide_train_val(train0_stages, train1_stages,
-                                                                                        (val_size // 6) * 4)
+                                                                                        (val_size // 4) * 3)
             val_index = np.concatenate((val0_stages, val1_stages))
             x_val_stages = x_stages[val_index]
             y_val_stages = y_stages[val_index]
             # ur
-            (train0_ur, train1_ur, val0_ur, val1_ur) = divide_train_val(train0_ur, train1_ur, val_size // 6)
+            (train0_ur, train1_ur, val0_ur, val1_ur) = divide_train_val(train0_ur, train1_ur, val_size // 8)
             val_index = np.concatenate((val0_ur, val1_ur))
             x_val_ur = x_ur[val_index]
             y_val_ur = y_ur[val_index]
             # fdd
-            (train0_fdd, train1_fdd, val0_fdd, val1_fdd) = divide_train_val(train0_fdd, train1_fdd, val_size // 6)
+            (train0_fdd, train1_fdd, val0_fdd, val1_fdd) = divide_train_val(train0_fdd, train1_fdd, val_size // 8)
             val_index = np.concatenate((val0_fdd, val1_fdd))
             x_val_fdd = x_fdd[val_index]
             y_val_fdd = y_fdd[val_index]
@@ -358,12 +358,12 @@ def main():
         x = Activation('relu')(x)
         # hidden layer
         x = Dropout(0.2)(x)
-        x = Dense(3072, name='fc2', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.1))(x)
+        x = Dense(3072, name='fc2', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.09))(x)
         x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
         x = Activation('relu')(x)
         # output layer
         x = Dropout(0.2)(x)
-        x = Dense(1, name='predictions', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.1))(x)
+        x = Dense(1, name='predictions', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.09))(x)
         x = Activation('sigmoid')(x)
 
         classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
