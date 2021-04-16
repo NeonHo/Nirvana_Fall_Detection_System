@@ -60,8 +60,7 @@ cam_times = 6  # Multi-cam dataset is how many times of the ur fall dataset.
 hidden_layer_units_num = 3072
 hidden_lambda = 0.1
 output_lambda = 0.1
-# After the training stops, use train+validation to train for 1 epoch
-use_val_for_training = False
+# validation
 val_size = 528
 val_size_stages = val_size // 8
 val_size_ur = (val_size // 8) * 6
