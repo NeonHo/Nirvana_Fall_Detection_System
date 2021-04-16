@@ -49,23 +49,23 @@ labels_key = 'labels'
 L = 10
 num_features = 4096
 batch_norm = True
-learning_rate = 0.01
-mini_batch_size = 2048
+learning_rate = 0.001
+mini_batch_size = 512
 weight_0 = 2
-epochs = 1000
+epochs = 2000
 use_validation = True
-use_early_stop = True
-cam_times = 1  # Multi-cam dataset is how many times of the ur fall dataset.
+use_early_stop = False
+cam_times = 6  # Multi-cam dataset is how many times of the ur fall dataset.
 # hidden layer units' number
-hidden_layer_units_num = 4096
-hidden_lambda = 0.
-output_lambda = 0.
+hidden_layer_units_num = 3072
+hidden_lambda = 0.1
+output_lambda = 0.1
 # After the training stops, use train+validation to train for 1 epoch
 use_val_for_training = False
-val_size = 200
-val_size_stages = val_size // 3
-val_size_ur = val_size // 3
-val_size_fdd = val_size // 3
+val_size = 528
+val_size_stages = val_size // 8
+val_size_ur = (val_size // 8) * 6
+val_size_fdd = val_size // 8
 # Threshold to classify between positive and negative
 threshold = 0.5
 # dropout pro
