@@ -5,7 +5,8 @@ from threading import Lock
 
 class OpticalGenerator:
     def __init__(self, avi_path, flow_save_path, bound, width, height, stack_length):
-        self.tvl1 = cv2.optflow.DualTVL1OpticalFlow_create(nscales=1, epsilon=0.05, warps=1)  # set parameters to speed up.
+        self.tvl1 = cv2.optflow.DualTVL1OpticalFlow_create()
+        # set parameters to speed up.nscales=1, epsilon=0.05, warps=1
         self.avi_path = avi_path
         self.flow_save_path = flow_save_path
         self.bound = bound
@@ -69,7 +70,8 @@ class OpticalGenerator:
             hsv[..., 0] = ang * 180 / np.pi / 2  # 角度
             hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
             bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-            cv2.imshow('BGR', bgr)  # show the BGR flow image.
+            images = np.hstack([frame2, bgr])
+            cv2.imshow('RBG & flow', images)  # show the BGR flow image.
             k = cv2.waitKey(1) & 0xff
             if k == 27:  # esc key to escape.
                 break

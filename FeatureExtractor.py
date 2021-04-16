@@ -141,7 +141,8 @@ class FeatureExtractor:
             flow_x, flow_y = flow_input_queue.get()
             self.add_flow_images_couple(flow_x, flow_y)
             # print("optical flow images:\t" + str(self.img_count) + "压入光流栈。")
-            if (self.img_count >= self.stack_length) and (self.img_count % self.stack_length == 0):
+            # and (self.img_count % self.stack_length == 0)
+            if (self.img_count >= self.stack_length) and (self.img_count % (self.stack_length / 2) == 0):
                 # Subtract mean 减去均值，做到归一化。
                 print("stack------------" + str(self.img_count))
                 self.flow_stack = self.flow_stack - np.tile(self.flow_mean[..., np.newaxis],
