@@ -5,7 +5,7 @@ import os
 import h5py
 import numpy as np
 from keras import regularizers
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import (Input, Activation, Dense, Dropout)
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
@@ -48,14 +48,14 @@ labels_key = 'labels'
 L = 10
 num_features = 4096
 batch_norm = True
-learning_rate = 0.002
-mini_batch_size = 512
+learning_rate = 0.01
+mini_batch_size = 2048
 weight_0 = 2
-epochs = 2000
+epochs = 1000
 use_validation = True
 # After the training stops, use train+validation to train for 1 epoch
 use_val_for_training = False
-val_size = 528
+val_size = 200
 # Threshold to classify between positive and negative
 threshold = 0.5
 
@@ -194,7 +194,7 @@ def reload_multiple_cameras_dataset(stage_head, stage_tail, limit_size=False):
     all1_stages = np.asarray(np.where(y_stages == 1)[0])
     # Step 2 under-sample
     if limit_size:
-        temp_size = (size // 24) * (stage_tail - stage_head) * 6
+        temp_size = (size // 24) * (stage_tail - stage_head)
         all0_stages = np.random.choice(all0_stages, temp_size, replace=False)
         all1_stages = np.random.choice(all1_stages, temp_size, replace=False)
         x_stages, y_stages = sample_from_dataset(x_stages, y_stages, all0_stages, all1_stages)
@@ -316,17 +316,17 @@ def main():
         if use_validation:
             # stages
             (train0_stages, train1_stages, val0_stages, val1_stages) = divide_train_val(train0_stages, train1_stages,
-                                                                                        (val_size // 4) * 3)
+                                                                                        val_size // 3)
             val_index = np.concatenate((val0_stages, val1_stages))
             x_val_stages = x_stages[val_index]
             y_val_stages = y_stages[val_index]
             # ur
-            (train0_ur, train1_ur, val0_ur, val1_ur) = divide_train_val(train0_ur, train1_ur, val_size // 8)
+            (train0_ur, train1_ur, val0_ur, val1_ur) = divide_train_val(train0_ur, train1_ur, val_size // 3)
             val_index = np.concatenate((val0_ur, val1_ur))
             x_val_ur = x_ur[val_index]
             y_val_ur = y_ur[val_index]
             # fdd
-            (train0_fdd, train1_fdd, val0_fdd, val1_fdd) = divide_train_val(train0_fdd, train1_fdd, val_size // 8)
+            (train0_fdd, train1_fdd, val0_fdd, val1_fdd) = divide_train_val(train0_fdd, train1_fdd, val_size // 3)
             val_index = np.concatenate((val0_fdd, val1_fdd))
             x_val_fdd = x_fdd[val_index]
             y_val_fdd = y_fdd[val_index]
@@ -357,13 +357,15 @@ def main():
         x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(extracted_features)
         x = Activation('relu')(x)
         # hidden layer
-        x = Dropout(0.2)(x)
-        x = Dense(3072, name='fc2', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.09))(x)
+        x = Dropout(0.1)(x)
+        # , kernel_regularizer=regularizers.l2(0.075)
+        x = Dense(4096, name='fc2', kernel_initializer='glorot_uniform')(x)
         x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
         x = Activation('relu')(x)
         # output layer
         x = Dropout(0.2)(x)
-        x = Dense(1, name='predictions', kernel_initializer='glorot_uniform', kernel_regularizer=regularizers.l2(0.09))(x)
+        # , kernel_regularizer=regularizers.l2(0.075)
+        x = Dense(1, name='predictions', kernel_initializer='glorot_uniform')(x)
         x = Activation('sigmoid')(x)
 
         classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
@@ -377,10 +379,10 @@ def main():
             if use_validation:
                 # callback definition
                 metric = 'val_loss'
-                # e = EarlyStopping(monitor=metric, min_delta=0, patience=500, mode='auto')
+                e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
                 c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=True,
                                     mode='auto')
-                callbacks = [c]
+                callbacks = [e, c]
             validation_data = None
             if use_validation:
                 validation_data = (x_val, y_val)
