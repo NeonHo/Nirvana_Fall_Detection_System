@@ -1,5 +1,7 @@
 from keras.models import load_model
-import winsound
+# import winsound
+
+from RgbFlowSignal import RgbFlowSignal
 
 
 class Classifier:
@@ -11,6 +13,7 @@ class Classifier:
         self.threshold = threshold  # 判断阈值
         self.duration = 1000  # millisecond
         self.freq = 500  # Hz
+        self.music_signal = RgbFlowSignal()
 
     def classify_single(self, feature_input_queue):
         while True:
@@ -18,7 +21,8 @@ class Classifier:
             predicted = self.classifier.predict(sample_feature)
             if predicted < self.threshold:
                 predicted = 0  # 小于阈值则为假，摔倒了。
-                winsound.Beep(self.freq, self.duration)
+                # winsound.Beep(self.freq, self.duration)
+                self.music_signal.music.emit(True)
                 print("被看护者摔倒了!!!!!!!!!")
             else:
                 predicted = 1  # 大于阈值则为真，没摔到。
