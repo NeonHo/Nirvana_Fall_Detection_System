@@ -2,6 +2,8 @@ import numpy as np
 import cv2
 from threading import Lock
 
+from RgbFlowSignal import RgbFlowSignal
+
 
 class OpticalGenerator:
     def __init__(self, avi_path, flow_save_path, bound, width, height, stack_length):
@@ -16,6 +18,7 @@ class OpticalGenerator:
         self.work_permission = False
         self.lock = Lock()
         self.stack_length = stack_length
+        self.rgb_flow_signal = RgbFlowSignal()
 
     def generate_flow_couple_tvl1(self, frame_input_queue, flow_output_queue):
         while True:
@@ -70,11 +73,14 @@ class OpticalGenerator:
             hsv[..., 0] = ang * 180 / np.pi / 2  # 角度
             hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
             bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-            images = np.hstack([frame2, bgr])
-            cv2.imshow('RBG & flow', images)  # show the BGR flow image.
-            k = cv2.waitKey(1) & 0xff
-            if k == 27:  # esc key to escape.
-                break
+
+            self.rgb_flow_signal.frames.emit([frame2, bgr])
+
+            # images = np.hstack([frame2, bgr])
+            # cv2.imshow('RBG & flow', images)  # show the BGR flow image.
+            # k = cv2.waitKey(1) & 0xff
+            # if k == 27:  # esc key to escape.
+            #     break
             flow_output_queue.put((flow[:, :, 0], flow[:, :, 1]))
             cont += 1
             previous_frame = next_frame

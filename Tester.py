@@ -1,9 +1,12 @@
 from threading import Thread
 from Classifier import Classifier
 from FeatureExtractor import FeatureExtractor
+from MonitorWindow import MonitorWindow
 from OpticalGenerator import OpticalGenerator
 from VideoGrapher import Videographer
 from queue import Queue
+from PyQt5.QtWidgets import QApplication
+import sys
 
 
 class Tester:
@@ -19,6 +22,7 @@ class Tester:
         self.weight_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\"
         self.mean_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\"
         self.model_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\URFD_results\\"
+        self.ui0_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\windows\\untitled.ui"
         # component
         self.videographer = Videographer(self.video_path, self.width, self.height)
         self.feature_extractor_0 = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,
@@ -36,7 +40,10 @@ class Tester:
         feature_queue = Queue()
         avi_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\test_ground\\cam7.avi"
         # Thread(target=self.videographer.capture_video, args=(frame_queue,)).start()
-        Thread(target=self.optical_generator.generate_optical_flow_tvl1, args=(avi_path, flow_queue_0)).start()
-        Thread(target=self.feature_extractor_0.extract, args=(flow_queue_0, feature_queue,)).start()
+        Thread(target=self.optical_generator.generate_optical_flow_tvl1,
+               args=(avi_path, flow_queue_0)).start()
+        # Thread(target=self.feature_extractor_0.extract, args=(flow_queue_0, feature_queue,)).start()
         # Thread(target=self.feature_extractor_1.extract, args=(flow_queue_1, feature_queue,)).start()
-        Thread(target=self.classifier.classify_single, args=(feature_queue,)).start()
+        # Thread(target=self.classifier.classify_single, args=(feature_queue,)).start()
+
+
