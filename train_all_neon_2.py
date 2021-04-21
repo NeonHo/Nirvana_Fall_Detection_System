@@ -58,8 +58,8 @@ use_early_stop = False
 cam_times = 6  # Multi-cam dataset is how many times of the ur fall dataset.
 # hidden layer units' number
 hidden_layer_units_num = 3072
-hidden_lambda = 0.1
-output_lambda = 0.1
+hidden_lambda = 0.05
+output_lambda = 0.05
 # validation
 val_size = 528
 val_size_stages = val_size // 8
