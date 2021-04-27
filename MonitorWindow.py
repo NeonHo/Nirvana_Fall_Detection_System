@@ -1,13 +1,11 @@
-import time
 from queue import Queue
 from threading import Thread
 
-import timer
+import os
+import cv2
 from PyQt5 import uic, QtMultimedia
 from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QImage, QPixmap
-import cv2
-from PyQt5.QtWidgets import QApplication
 
 from Classifier import Classifier
 from FeatureExtractor import FeatureExtractor
@@ -26,17 +24,18 @@ class MonitorWindow:
         self.threshold = 0.5
 
         # paths
-        self.video_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\videos\\"
-        self.flow_image_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\flow\\"
-        self.features_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\features\\"
-        self.weight_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\"
-        self.mean_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\"
-        self.model_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\URFD_results\\"
-        self.ui0_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\windows\\untitled.ui"
-        self.jpg_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\alarm.jpg"
-        self.sound_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\alarm.mp3"
-        self.avi_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\test_ground\\cam7_15.avi"
-        self.ends_jpg_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\ends.jpg"
+        work_path = os.getcwd()
+        self.video_path = work_path + "\\otherFiles\\videos\\"
+        self.flow_image_path = work_path + "\\otherFiles\\flow\\"
+        self.features_path = work_path + "\\otherFiles\\features\\"
+        self.weight_path = work_path + "\\otherFiles\\"
+        self.mean_path = work_path + "\\otherFiles\\"
+        self.model_path = work_path + "\\otherFiles\\URFD_results\\"
+        self.ui0_path = work_path + "\\windows\\untitled.ui"
+        self.jpg_path = work_path + "\\otherFiles\\alarm.jpg"
+        self.sound_path = work_path + "\\otherFiles\\alarm.mp3"
+        self.avi_path = work_path + "\\test_ground\\cam7_14.avi"
+        self.ends_jpg_path = work_path + "\\otherFiles\\ends.jpg"
         self.ui = uic.loadUi(self.ui0_path)
         self.rgb = None
         self.flow = None
