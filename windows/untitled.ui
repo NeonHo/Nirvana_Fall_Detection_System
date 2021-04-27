@@ -146,7 +146,7 @@
           <property name="minimumSize">
            <size>
             <width>448</width>
-            <height>20</height>
+            <height>50</height>
            </size>
           </property>
           <property name="maximumSize">
@@ -167,6 +167,12 @@
          <layout class="QGridLayout" name="gridLayout_2_1">
           <item row="0" column="0">
            <widget class="QGraphicsView" name="graphicsView_poto">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
               <width>224</width>
@@ -183,6 +189,12 @@
           </item>
           <item row="0" column="1">
            <widget class="QTextBrowser" name="textBrowser_data">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="minimumSize">
              <size>
               <width>224</width>
@@ -270,15 +282,57 @@
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_rgb">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>224</width>
+            <height>224</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>224</width>
+            <height>224</height>
+           </size>
+          </property>
           <property name="text">
            <string>TextLabel</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
          <widget class="QLabel" name="label_fl">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>224</width>
+            <height>224</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>224</width>
+            <height>224</height>
+           </size>
+          </property>
           <property name="text">
            <string>TextLabel</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -302,6 +356,18 @@
               <height>16777215</height>
              </size>
             </property>
+            <property name="maximum">
+             <number>10</number>
+            </property>
+            <property name="singleStep">
+             <number>1</number>
+            </property>
+            <property name="pageStep">
+             <number>1</number>
+            </property>
+            <property name="sliderPosition">
+             <number>5</number>
+            </property>
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -318,9 +384,12 @@
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QLabel" name="label_value">
+           <widget class="QLabel" name="label_Threshold_2">
             <property name="text">
              <string>TextLabel</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
             </property>
            </widget>
           </item>

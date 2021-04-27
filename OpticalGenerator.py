@@ -61,6 +61,7 @@ class OpticalGenerator:
         while ret:
             ret, frame2 = video_pointer.read()  # read the next frame of the video.
             if not ret:
+                self.rgb_flow_signal.ends.emit(ret)
                 break
             frame2 = cv2.resize(frame2, (self.width, self.height))
             next_frame = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)  # convert color BGR to gray.

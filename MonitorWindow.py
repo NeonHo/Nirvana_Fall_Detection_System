@@ -7,6 +7,7 @@ from PyQt5 import uic, QtMultimedia
 from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QImage, QPixmap
 import cv2
+from PyQt5.QtWidgets import QApplication
 
 from Classifier import Classifier
 from FeatureExtractor import FeatureExtractor
@@ -22,6 +23,7 @@ class MonitorWindow:
         self.height = 224
         self.bound = 20
         self.sound_level = 50
+        self.threshold = 0.5
 
         # paths
         self.video_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\videos\\"
@@ -33,7 +35,8 @@ class MonitorWindow:
         self.ui0_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\windows\\untitled.ui"
         self.jpg_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\alarm.jpg"
         self.sound_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\alarm.mp3"
-        self.avi_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\test_ground\\cam7.avi"
+        self.avi_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\test_ground\\cam7_12.avi"
+        self.ends_jpg_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\ends.jpg"
         self.ui = uic.loadUi(self.ui0_path)
         self.rgb = None
         self.flow = None
@@ -47,6 +50,7 @@ class MonitorWindow:
         content = QtMultimedia.QMediaContent(url)
         self.player = QtMultimedia.QMediaPlayer()
         self.player.setMedia(content)
+        self.ui.label_Threshold_2.setText(str(self.threshold))
 
         # component
         self.videographer = Videographer(self.video_path, self.width, self.height)
@@ -54,16 +58,18 @@ class MonitorWindow:
                                                   self.features_path, self.width, self.height)
         self.optical_generator = OpticalGenerator(self.video_path, self.flow_image_path, self.bound, self.width,
                                                   self.height, self.feature_extractor.stack_length)
-        self.classifier = Classifier(self.model_path, self.features_path)
+        self.classifier = Classifier(self.model_path, self.features_path, threshold=self.threshold)
 
         # queues
         self.flow_queue = Queue(1)
         self.feature_queue = Queue(1)
 
         # signals
+        self.optical_generator.rgb_flow_signal.ends.connect(self.show_ends)
         self.optical_generator.rgb_flow_signal.frames.connect(self.show_frame)
         self.classifier.music_signal.music.connect(self.play_music)
         self.ui.horizontalSlider_sound.sliderMoved.connect(self.update_music_volume)
+        self.ui.horizontalSlider_threshold.sliderMoved.connect(self.update_predict_threshold)
         self.ui.pushButton.clicked.connect(self.play_stop)
         self.ui.frame_fall.setStyleSheet("QFrame { background-color: Green }")
         self.exam()
@@ -86,12 +92,27 @@ class MonitorWindow:
             self.player.play()
             self.blink_light()
 
+    def show_ends(self, ends):
+        if not ends:
+            img = cv2.imread(self.ends_jpg_path)
+            img = cv2.resize(img, (self.width, self.height))
+            frame = QImage(img, self.width, self.height, QImage.Format_RGB888)
+            pix = QPixmap.fromImage(frame)
+            self.ui.label_rgb.setPixmap(pix)
+            self.ui.label_fl.setPixmap(pix)
+
     def blink_light(self):
         self.ui.frame_fall.setStyleSheet("QFrame { background-color: Red }")
 
     def play_stop(self):
         self.player.stop()
         self.ui.frame_fall.setStyleSheet("QFrame { background-color: Green }")
+
+    def update_predict_threshold(self):
+        self.threshold = self.ui.horizontalSlider_threshold.value() / 10.0
+        self.classifier.threshold = self.threshold
+        self.ui.label_Threshold_2.setText(str(self.threshold))
+        self.ui.label_Threshold_2.show()
 
     def update_music_volume(self):
         self.sound_level = self.ui.horizontalSlider_sound.value()
