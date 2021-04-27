@@ -35,7 +35,7 @@ class MonitorWindow:
         self.ui0_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\windows\\untitled.ui"
         self.jpg_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\alarm.jpg"
         self.sound_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\alarm.mp3"
-        self.avi_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\test_ground\\cam7_12.avi"
+        self.avi_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\test_ground\\cam7_15.avi"
         self.ends_jpg_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\ends.jpg"
         self.ui = uic.loadUi(self.ui0_path)
         self.rgb = None
@@ -68,8 +68,8 @@ class MonitorWindow:
         self.optical_generator.rgb_flow_signal.ends.connect(self.show_ends)
         self.optical_generator.rgb_flow_signal.frames.connect(self.show_frame)
         self.classifier.music_signal.music.connect(self.play_music)
-        self.ui.horizontalSlider_sound.sliderMoved.connect(self.update_music_volume)
-        self.ui.horizontalSlider_threshold.sliderMoved.connect(self.update_predict_threshold)
+        self.ui.horizontalSlider_sound.valueChanged.connect(self.update_music_volume)
+        self.ui.horizontalSlider_threshold.valueChanged.connect(self.update_predict_threshold)
         self.ui.pushButton.clicked.connect(self.play_stop)
         self.ui.frame_fall.setStyleSheet("QFrame { background-color: Green }")
         self.exam()
