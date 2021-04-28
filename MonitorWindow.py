@@ -17,6 +17,7 @@ class MonitorWindow:
     def __init__(self):
         super(MonitorWindow, self).__init__()
         # parameters
+        self.is_windows = True
         self.width = 224
         self.height = 224
         self.bound = 20
@@ -24,18 +25,19 @@ class MonitorWindow:
         self.threshold = 0.5
 
         # paths
+        separator = "\\" if self.is_windows else "/"
         work_path = os.getcwd()
-        self.video_path = work_path + "\\otherFiles\\videos\\"
-        self.flow_image_path = work_path + "\\otherFiles\\flow\\"
-        self.features_path = work_path + "\\otherFiles\\features\\"
-        self.weight_path = work_path + "\\otherFiles\\"
-        self.mean_path = work_path + "\\otherFiles\\"
-        self.model_path = work_path + "\\otherFiles\\URFD_results\\"
-        self.ui0_path = work_path + "\\windows\\untitled.ui"
-        self.jpg_path = work_path + "\\otherFiles\\alarm.jpg"
-        self.sound_path = work_path + "\\otherFiles\\alarm.mp3"
-        self.avi_path = work_path + "\\test_ground\\cam7_14.avi"
-        self.ends_jpg_path = work_path + "\\otherFiles\\ends.jpg"
+        self.video_path = work_path + separator + "otherFiles" + separator + "videos" + separator
+        self.flow_image_path = work_path + separator + "otherFiles" + separator + "flow" + separator
+        self.features_path = work_path + separator + "otherFiles" + separator + "features" + separator
+        self.weight_path = work_path + separator + "otherFiles" + separator
+        self.mean_path = work_path + separator + "otherFiles" + separator
+        self.model_path = work_path + separator + "otherFiles" + separator + "URFD_results" + separator
+        self.ui0_path = work_path + separator + "windows" + separator + "untitled.ui"
+        self.jpg_path = work_path + separator + "otherFiles" + separator + "alarm.jpg"
+        self.sound_path = work_path + separator + "otherFiles" + separator + "alarm.mp3"
+        self.avi_path = work_path + separator + "test_ground" + separator + "cam3_1.avi"
+        self.ends_jpg_path = work_path + separator + "otherFiles" + separator + "ends.jpg"
         self.ui = uic.loadUi(self.ui0_path)
         self.rgb = None
         self.flow = None
@@ -56,8 +58,8 @@ class MonitorWindow:
         self.feature_extractor = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,
                                                   self.features_path, self.width, self.height)
         self.optical_generator = OpticalGenerator(self.video_path, self.flow_image_path, self.bound, self.width,
-                                                  self.height, self.feature_extractor.stack_length)
-        self.classifier = Classifier(self.model_path, self.features_path, threshold=self.threshold)
+                                                  self.height, self.feature_extractor.stack_length, use_qt=True)
+        self.classifier = Classifier(self.model_path, self.features_path, use_qt=True, threshold=self.threshold)
 
         # queues
         self.flow_queue = Queue(1)

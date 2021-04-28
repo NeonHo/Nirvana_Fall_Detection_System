@@ -6,7 +6,7 @@ from RgbFlowSignal import RgbFlowSignal
 
 
 class OpticalGenerator:
-    def __init__(self, avi_path, flow_save_path, bound, width, height, stack_length):
+    def __init__(self, avi_path, flow_save_path, bound, width, height, stack_length, use_qt):
         self.tvl1 = cv2.optflow.DualTVL1OpticalFlow_create()
         # set parameters to speed up.nscales=1, epsilon=0.05, warps=1
         self.avi_path = avi_path
@@ -18,7 +18,10 @@ class OpticalGenerator:
         self.work_permission = False
         self.lock = Lock()
         self.stack_length = stack_length
-        self.rgb_flow_signal = RgbFlowSignal()
+        self.use_qt = use_qt
+        self.rgb_flow_signal = None
+        if self.use_qt:
+            self.rgb_flow_signal = RgbFlowSignal()
 
     def generate_flow_couple_tvl1(self, frame_input_queue, flow_output_queue):
         while True:
@@ -61,7 +64,8 @@ class OpticalGenerator:
         while ret:
             ret, frame2 = video_pointer.read()  # read the next frame of the video.
             if not ret:
-                self.rgb_flow_signal.ends.emit(ret)
+                if self.use_qt:
+                    self.rgb_flow_signal.ends.emit(ret)
                 break
             frame2 = cv2.resize(frame2, (self.width, self.height))
             next_frame = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)  # convert color BGR to gray.
@@ -74,8 +78,8 @@ class OpticalGenerator:
             hsv[..., 0] = ang * 180 / np.pi / 2  # 角度
             hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
             bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-
-            self.rgb_flow_signal.frames.emit([frame2, bgr])
+            if self.use_qt:
+                self.rgb_flow_signal.frames.emit([frame2, bgr])
 
             # images = np.hstack([frame2, bgr])
             # cv2.imshow('RBG & flow', images)  # show the BGR flow image.
