@@ -9,6 +9,7 @@ from numpy.random import seed
 import os
 
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 seed(1)
 matplotlib.use('Agg')
 

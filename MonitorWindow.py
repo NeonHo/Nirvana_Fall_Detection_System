@@ -36,7 +36,7 @@ class MonitorWindow:
         self.ui0_path = work_path + separator + "windows" + separator + "untitled.ui"
         self.jpg_path = work_path + separator + "otherFiles" + separator + "alarm.jpg"
         self.sound_path = work_path + separator + "otherFiles" + separator + "alarm.mp3"
-        self.avi_path = work_path + separator + "test_ground" + separator + "cam3_1.avi"
+        self.avi_path = work_path + separator + "test_ground" + separator + "cam7_2.avi"
         self.ends_jpg_path = work_path + separator + "otherFiles" + separator + "ends.jpg"
         self.ui = uic.loadUi(self.ui0_path)
         self.rgb = None
@@ -58,7 +58,8 @@ class MonitorWindow:
         self.feature_extractor = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,
                                                   self.features_path, self.width, self.height)
         self.optical_generator = OpticalGenerator(self.video_path, self.flow_image_path, self.bound, self.width,
-                                                  self.height, self.feature_extractor.stack_length, use_qt=True)
+                                                  self.height, self.feature_extractor.stack_length, use_qt=True,
+                                                  is_windows=self.is_windows)
         self.classifier = Classifier(self.model_path, self.features_path, use_qt=True, threshold=self.threshold)
 
         # queues
@@ -66,7 +67,7 @@ class MonitorWindow:
         self.feature_queue = Queue(1)
 
         # signals
-        self.optical_generator.rgb_flow_signal.ends.connect(self.show_ends)
+        self.optical_generator.rgb_flow_signal.not_ends.connect(self.show_ends)
         self.optical_generator.rgb_flow_signal.frames.connect(self.show_frame)
         self.classifier.music_signal.music.connect(self.play_music)
         self.ui.horizontalSlider_sound.valueChanged.connect(self.update_music_volume)
@@ -93,8 +94,8 @@ class MonitorWindow:
             self.player.play()
             self.blink_light()
 
-    def show_ends(self, ends):
-        if not ends:
+    def show_ends(self, not_ends):
+        if not not_ends:
             img = cv2.imread(self.ends_jpg_path)
             img = cv2.resize(img, (self.width, self.height))
             frame = QImage(img, self.width, self.height, QImage.Format_RGB888)

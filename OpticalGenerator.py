@@ -1,12 +1,16 @@
 import numpy as np
 import cv2
 from threading import Lock
+import os
 
-from RgbFlowSignal import RgbFlowSignal
+
+def show_rgb_bgr(rgb_frame, flow_frame):
+    images = np.hstack([rgb_frame, flow_frame])
+    # cv2_imshow(images)  # show the BGR flow image.
 
 
 class OpticalGenerator:
-    def __init__(self, avi_path, flow_save_path, bound, width, height, stack_length, use_qt):
+    def __init__(self, avi_path, flow_save_path, bound, width, height, stack_length, use_qt, is_windows):
         self.tvl1 = cv2.optflow.DualTVL1OpticalFlow_create()
         # set parameters to speed up.nscales=1, epsilon=0.05, warps=1
         self.avi_path = avi_path
@@ -20,8 +24,21 @@ class OpticalGenerator:
         self.stack_length = stack_length
         self.use_qt = use_qt
         self.rgb_flow_signal = None
+        self.is_windows = is_windows
         if self.use_qt:
+            from RgbFlowSignal import RgbFlowSignal
             self.rgb_flow_signal = RgbFlowSignal()
+        # else:
+            # from google.colab.patches import cv2_imshow
+
+    def show_end_fl(self, not_ends):
+        if not not_ends:
+            work_path = os.getcwd()
+            separator = "\\" if self.is_windows else "/"
+            ends_jpg_path = work_path + separator + "otherFiles" + separator + "ends.jpg"
+            img = cv2.imread(ends_jpg_path)
+            img = cv2.resize(img, (self.width, self.height))
+            show_rgb_bgr(img, img)
 
     def generate_flow_couple_tvl1(self, frame_input_queue, flow_output_queue):
         while True:
@@ -65,7 +82,9 @@ class OpticalGenerator:
             ret, frame2 = video_pointer.read()  # read the next frame of the video.
             if not ret:
                 if self.use_qt:
-                    self.rgb_flow_signal.ends.emit(ret)
+                    self.rgb_flow_signal.not_ends.emit(ret)
+                else:
+                    self.show_end_fl(ret)
                 break
             frame2 = cv2.resize(frame2, (self.width, self.height))
             next_frame = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)  # convert color BGR to gray.
@@ -80,12 +99,11 @@ class OpticalGenerator:
             bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
             if self.use_qt:
                 self.rgb_flow_signal.frames.emit([frame2, bgr])
-
-            # images = np.hstack([frame2, bgr])
-            # cv2.imshow('RBG & flow', images)  # show the BGR flow image.
-            # k = cv2.waitKey(1) & 0xff
-            # if k == 27:  # esc key to escape.
-            #     break
+            else:
+                show_rgb_bgr(frame2, bgr)
+                k = cv2.waitKey(1) & 0xff
+                if k == 27:  # esc key to escape.
+                    break
             flow_output_queue.put((flow[:, :, 0], flow[:, :, 1]))
             cont += 1
             previous_frame = next_frame
