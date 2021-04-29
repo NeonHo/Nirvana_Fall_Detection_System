@@ -22,7 +22,6 @@ class Classifier:
             predicted = self.classifier.predict(sample_feature)
             if predicted < self.threshold:
                 predicted = 0  # 小于阈值则为假，摔倒了。
-                # winsound.Beep(self.freq, self.duration)
                 if self.use_qt:
                     self.music_signal.music.emit(True)
                 print("被看护者摔倒了!!!!!!!!!")

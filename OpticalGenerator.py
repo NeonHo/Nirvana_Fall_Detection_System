@@ -1,12 +1,6 @@
 import numpy as np
 import cv2
 from threading import Lock
-import os
-
-
-def show_rgb_bgr(rgb_frame, flow_frame):
-    images = np.hstack([rgb_frame, flow_frame])
-    # cv2_imshow(images)  # show the BGR flow image.
 
 
 class OpticalGenerator:
@@ -28,24 +22,11 @@ class OpticalGenerator:
         if self.use_qt:
             from RgbFlowSignal import RgbFlowSignal
             self.rgb_flow_signal = RgbFlowSignal()
-        # else:
-            # from google.colab.patches import cv2_imshow
-
-    def show_end_fl(self, not_ends):
-        if not not_ends:
-            work_path = os.getcwd()
-            separator = "\\" if self.is_windows else "/"
-            ends_jpg_path = work_path + separator + "otherFiles" + separator + "ends.jpg"
-            img = cv2.imread(ends_jpg_path)
-            img = cv2.resize(img, (self.width, self.height))
-            show_rgb_bgr(img, img)
 
     def generate_flow_couple_tvl1(self, frame_input_queue, flow_output_queue):
         while True:
             cv2.waitKey(1)
-            # self.lock.acquire()
             previous_frame, current_frame, flow_index = frame_input_queue.get()
-            # self.lock.release()
             hsv = np.zeros_like(previous_frame)
             previous_frame = cv2.cvtColor(previous_frame, cv2.COLOR_BGR2GRAY)
             current_frame = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
@@ -83,8 +64,6 @@ class OpticalGenerator:
             if not ret:
                 if self.use_qt:
                     self.rgb_flow_signal.not_ends.emit(ret)
-                else:
-                    self.show_end_fl(ret)
                 break
             frame2 = cv2.resize(frame2, (self.width, self.height))
             next_frame = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)  # convert color BGR to gray.
@@ -99,11 +78,6 @@ class OpticalGenerator:
             bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
             if self.use_qt:
                 self.rgb_flow_signal.frames.emit([frame2, bgr])
-            else:
-                show_rgb_bgr(frame2, bgr)
-                k = cv2.waitKey(1) & 0xff
-                if k == 27:  # esc key to escape.
-                    break
             flow_output_queue.put((flow[:, :, 0], flow[:, :, 1]))
             cont += 1
             previous_frame = next_frame
@@ -136,11 +110,7 @@ class OpticalGenerator:
             k = cv2.waitKey(1) & 0xff
             if k == 27:  # esc key to escape.
                 break
-            count += 1
             flow_output_queue_0.put((flow[:, :, 0], flow[:, :, 1]))
-            # if count % (self.stack_length * 2) <= self.stack_length:
-            #     flow_output_queue_1.put((flow[:, :, 0], flow[:, :, 1]))  # 01-10, 21-30, 41-50...
-            # else:
-            #     flow_output_queue_0.put((flow[:, :, 0], flow[:, :, 1]))  # 11-20, 31-40, 51-60...
+            count += 1
             previous_frame = next_frame
             print("flow:" + str(count))
