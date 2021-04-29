@@ -33,12 +33,14 @@ save_plots = True
 # Training is skipped and test is done
 use_checkpoint = False
 # --------------------------
-
-best_model_path = 'models/'
-plots_folder = 'plots/'
+# 'models\\''models/'
+# 'plots\\''plots/'
+best_model_path = 'models\\'
+plots_folder = 'plots\\'
 checkpoint_path = best_model_path + 'fold_'
-
-saved_files_folder = '/content/drive/MyDrive/train/saved_features/'
+# 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
+# '/content/drive/MyDrive/train/saved_features/'
+saved_files_folder = 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
 features_file = saved_files_folder + 'features_multicam.h5'
 labels_file = saved_files_folder + 'labels_multicam.h5'
 features_key = 'features'
@@ -52,7 +54,7 @@ learning_rate = 0.01
 mini_batch_size = 0
 weight_0 = 1
 epochs = 6000
-use_validation = False
+use_validation = True
 # After the training stops, use train+validation to train for 1 epoch
 use_val_for_training = False
 val_size = 100
@@ -124,7 +126,7 @@ def load_dataset():
 
     # Load the data separated by cameras for cross-validation
     stages = []
-    for i in range(1, 25):
+    for i in range(1, 5):
         stages.append('chute{:02}'.format(i))
     cams_x = []
     cams_y = []
@@ -137,6 +139,13 @@ def load_dataset():
                 temp_y.append(np.asarray(h5labels[stage][cam][key]))
             temp_x = np.concatenate(temp_x, axis=0)
             temp_y = np.concatenate(temp_y, axis=0)
+            temp_0_indexes = np.where(temp_y == 0)[0]
+            temp_1_indexes = np.where(temp_y == 1)[0]
+            # Balance the positive and negative samples
+            temp_1_indexes = np.random.choice(temp_1_indexes, len(temp_0_indexes), replace=False)
+            temp_indexes = np.concatenate((temp_0_indexes, temp_1_indexes))
+            temp_x = np.asarray(temp_x[temp_indexes, ...])
+            temp_y = np.asarray(temp_y[temp_indexes])
             if nb_stage == 0:
                 cams_x.append(temp_x)
                 cams_y.append(temp_y)
@@ -145,7 +154,6 @@ def load_dataset():
                 cams_y[nb_cam] = np.concatenate([cams_y[nb_cam], temp_y], axis=0)
             del temp_x
             del temp_y
-    # before return, we balance the positive and negative samples.
 
     return cams_x, cams_y
 
@@ -180,49 +188,24 @@ def main():
         # Create a validation subset from the training set
         zeroes = np.asarray(np.where(train_y == 0)[0])
         ones = np.asarray(np.where(train_y == 1)[0])
-        train_val_split_0 = StratifiedShuffleSplit(n_splits=1, test_size=val_size / 2, random_state=7)
+        train_val_split_0 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size / 2), random_state=7)
         indices_0 = train_val_split_0.split(train_x[zeroes, ...], np.argmax(train_y[zeroes, ...], 1))
-        train_val_split_1 = StratifiedShuffleSplit(n_splits=1, test_size=val_size / 2, random_state=7)
+        train_val_split_1 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size / 2), random_state=7)
         indices_1 = train_val_split_1.split(train_x[ones, ...], np.argmax(train_y[ones, ...], 1))
         train_indices_0, val_indices_0 = next(indices_0)
         train_indices_1, val_indices_1 = next(indices_1)
 
-        _x_train = np.concatenate([train_x[zeroes, ...][train_indices_0, ...],
-                                   train_x[ones, ...][train_indices_1, ...]], axis=0)
-        _y_train = np.concatenate([train_y[zeroes, ...][train_indices_0, ...],
-                                   train_y[ones, ...][train_indices_1, ...]], axis=0)
+        x_train = np.concatenate([train_x[zeroes, ...][train_indices_0, ...],
+                                  train_x[ones, ...][train_indices_1, ...]], axis=0)
+        y_train = np.concatenate([train_y[zeroes, ...][train_indices_0, ...],
+                                  train_y[ones, ...][train_indices_1, ...]], axis=0)
         x_val = np.concatenate([train_x[zeroes, ...][val_indices_0, ...],
                                 train_x[ones, ...][val_indices_1, ...]], axis=0)
         y_val = np.concatenate([train_y[zeroes, ...][val_indices_0, ...],
                                 train_y[ones, ...][val_indices_1, ...]], axis=0)
-        y_val = np.squeeze(y_val)
-        _y_train = np.squeeze(np.asarray(_y_train))
 
         del train_x
         del train_y
-
-        # Balance the positive and negative samples
-        all0 = np.where(_y_train == 0)[0]
-        all1 = np.where(_y_train == 1)[0]
-
-        all1 = np.random.choice(all1, len(all0), replace=False)
-        all_flatten = np.concatenate((all0.flatten(), all1.flatten()))
-
-        del all1
-        del all0
-
-        x_train = np.asarray(_x_train[all_flatten, ...])
-        y_train = np.asarray(_y_train[all_flatten])
-
-        del all_flatten
-        del _x_train
-        del _y_train
-
-        x_test = np.asarray(test_x)
-        y_test = np.asarray(test_y)
-
-        del test_x
-        del test_y
 
         # ==================== CLASSIFIER ========================
         extracted_features = Input(shape=(num_features,), dtype='float32', name='input')
@@ -233,17 +216,17 @@ def main():
             x = ELU(alpha=1.0)(extracted_features)
 
         x = Dropout(0.1)(x)
-        x = Dense(4096, name='fc2', init='glorot_uniform')(x)
+        x = Dense(4096, name='fc2', kernel_initializer='glorot_uniform')(x)
         if batch_norm:
             x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
             x = Activation('relu')(x)
         else:
             x = ELU(alpha=1.0)(x)
         x = Dropout(0.2)(x)
-        x = Dense(1, name='predictions', init='glorot_uniform')(x)
+        x = Dense(1, name='predictions', kernel_initializer='glorot_uniform')(x)
         x = Activation('sigmoid')(x)
 
-        classifier = Model(input=extracted_features, output=x, name='classifier')
+        classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
         fold_best_model_path = best_model_path + 'multicam_fold_{}'.format(cam)
         classifier.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
 
@@ -257,7 +240,7 @@ def main():
                 # callback definition
                 metric = 'val_loss'
                 e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
-                c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=False,
+                c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=True,
                                     mode='auto')
                 callbacks = [e, c]
             validation_data = None
@@ -278,7 +261,7 @@ def main():
                 callbacks=callbacks
             )
             if not use_validation:
-                classifier.save(fold_best_model_path)
+                classifier.save_weights(fold_best_model_path)
 
             plot_training_info(plots_folder + exp + '_fold' + str(cam),
                                ['accuracy', 'loss'], save_plots, history.history)
@@ -300,14 +283,14 @@ def main():
                     callbacks=callbacks
                 )
 
-                classifier.save(fold_best_model_path)
+                classifier.save_weights(fold_best_model_path)
 
         # ==================== EVALUATION ========================
         # Load best model
         print('Model loaded from checkpoint')
-        classifier = load_model(fold_best_model_path)
+        classifier.load_weights(fold_best_model_path)
 
-        predicted = classifier.predict(x_test)
+        predicted = classifier.predict(test_x)
         for i in range(len(predicted)):
             if predicted[i] < threshold:
                 predicted[i] = 0
@@ -317,7 +300,7 @@ def main():
         predicted = np.asarray(predicted).astype(int)
 
         # Compute metrics and print them
-        cm = confusion_matrix(y_test, predicted, labels=[0, 1])
+        cm = confusion_matrix(test_y, predicted, labels=[0, 1])
         tp = cm[0][0]
         fn = cm[0][1]
         fp = cm[1][0]
@@ -330,8 +313,8 @@ def main():
         recall = tp / float(tp + fn)
         specificity = tn / float(tn + fp)
         f1 = 2 * float(precision * recall) / float(precision + recall)
-        accuracy = accuracy_score(y_test, predicted)
-        fpr, tpr, _ = roc_curve(y_test, predicted)
+        accuracy = accuracy_score(test_y, predicted)
+        fpr, tpr, _ = roc_curve(test_y, predicted)
         roc_auc = auc(fpr, tpr)
 
         print('FOLD/CAMERA {} results:'.format(cam))
