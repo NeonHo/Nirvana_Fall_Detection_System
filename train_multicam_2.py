@@ -227,7 +227,7 @@ def main():
         x = Activation('sigmoid')(x)
 
         classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
-        fold_best_model_path = best_model_path + 'multicam_fold_{}'.format(cam)
+        fold_best_model_path = best_model_path + 'multicam_fold_{}.h5'.format(cam)
         classifier.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
 
         if not use_checkpoint:
