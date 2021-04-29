@@ -8,14 +8,14 @@ from keras.models import Sequential
 from numpy.random import seed
 import os
 
+
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 seed(1)
 matplotlib.use('Agg')
 
 
 class FeatureExtractor:
-    def __init__(self, network_weight_path, mean_file_path, optical_frame_path, features_path, width, height,
+    def __init__(self, network_weight_path, mean_file_path, optical_frame_path, features_path, width, height, use_qt,
                  num_features=4096, features_key='features'):
         """
 
@@ -33,11 +33,16 @@ class FeatureExtractor:
         self.features_key = features_key  # 提取的H5特征文件中的键名
         self.optical_frame_path = optical_frame_path
         self.features_path = features_path
+        self.use_qt = use_qt
         # the flow array will be zeros at the head
         self.img_count = 0
         self.width = width
         self.height = height
         self.flow_stack = np.zeros((self.width, self.height, 2 * self.stack_length, 1), dtype=np.float64)
+        # signal
+        if self.use_qt:
+            from RgbFlowSignal import RgbFlowSignal
+            self.signal = RgbFlowSignal()
 
         self.model = Sequential()  # 多个网络层的线性堆叠
 
@@ -145,7 +150,7 @@ class FeatureExtractor:
             # and (self.img_count % self.stack_length == 0)
             if (self.img_count >= self.stack_length) and (self.img_count % (self.stack_length / 2) == 0):
                 # Subtract mean 减去均值，做到归一化。
-                print("stack------------" + str(self.img_count))
+                self.signal.per_stack.emit(self.img_count)
                 self.flow_stack = self.flow_stack - np.tile(self.flow_mean[..., np.newaxis],
                                                             (1, 1, 1, self.flow_stack.shape[3]))
                 flow = np.transpose(self.flow_stack, (3, 0, 1, 2))

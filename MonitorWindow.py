@@ -1,14 +1,14 @@
+import os
 from queue import Queue
 from threading import Thread
 
-import os
 import cv2
-from PyQt5 import uic, QtMultimedia
-from PyQt5.QtCore import QUrl
-from PyQt5.QtGui import QImage, QPixmap
+from PyQt5 import uic
+from PyQt5.QtGui import QImage, QPixmap, QTextCursor
 
 from Classifier import Classifier
 from FeatureExtractor import FeatureExtractor
+from MusicPlayer import MusicPlayer
 from OpticalGenerator import OpticalGenerator
 from VideoGrapher import Videographer
 
@@ -47,16 +47,13 @@ class MonitorWindow:
         alarm_img = QPixmap.fromImage(alarm_img)
         self.ui.label_sound.setPixmap(alarm_img)
         self.ui.label_sound.show()
-        url = QUrl.fromLocalFile(self.sound_path)
-        content = QtMultimedia.QMediaContent(url)
-        self.player = QtMultimedia.QMediaPlayer()
-        self.player.setMedia(content)
+        self.player = MusicPlayer(self.sound_path)
         self.ui.label_Threshold_2.setText(str(self.threshold))
 
         # component
         self.videographer = Videographer(self.video_path, self.width, self.height)
         self.feature_extractor = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,
-                                                  self.features_path, self.width, self.height)
+                                                  self.features_path, self.width, self.height, use_qt=True)
         self.optical_generator = OpticalGenerator(self.video_path, self.flow_image_path, self.bound, self.width,
                                                   self.height, self.feature_extractor.stack_length, use_qt=True,
                                                   is_windows=self.is_windows)
@@ -69,7 +66,10 @@ class MonitorWindow:
         # signals
         self.optical_generator.rgb_flow_signal.not_ends.connect(self.show_ends)
         self.optical_generator.rgb_flow_signal.frames.connect(self.show_frame)
+        self.optical_generator.rgb_flow_signal.per_flow.connect(self.update_flow_index)
+        self.feature_extractor.signal.per_stack.connect(self.update_stack_index)
         self.classifier.music_signal.music.connect(self.play_music)
+        self.classifier.music_signal.judge_message.connect(self.show_fall_message)
         self.ui.horizontalSlider_sound.valueChanged.connect(self.update_music_volume)
         self.ui.horizontalSlider_threshold.valueChanged.connect(self.update_predict_threshold)
         self.ui.pushButton.clicked.connect(self.play_stop)
@@ -88,11 +88,27 @@ class MonitorWindow:
         self.ui.label_rgb.show()
         self.ui.label_fl.show()
 
+    def update_stack_index(self, index):
+        self.ui.FlowStackTextEdit.moveCursor(QTextCursor.End)
+        self.ui.FlowStackTextEdit.insertPlainText('\n' + str(index))
+
+    def update_flow_index(self, index):
+        self.ui.FlowProcessTextEdit.moveCursor(QTextCursor.End)
+        self.ui.FlowProcessTextEdit.insertPlainText('\n' + str(index))
+
     def play_music(self, fall):
         if fall:
-            self.player.setVolume(self.sound_level)
-            self.player.play()
-            self.blink_light()
+            self.player.player.setVolume(self.sound_level)
+            self.player.player.play()
+
+    def show_fall_message(self, fall):
+        if fall:
+            self.ui.frame_fall.setStyleSheet("QFrame { background-color: Red }")
+            self.ui.label_fall.setText("Fall!!!")
+            self.ui.label_fall.show()
+        else:
+            self.ui.label_fall.setText("Not Fall.")
+            self.ui.label_fall.show()
 
     def show_ends(self, not_ends):
         if not not_ends:
@@ -103,12 +119,11 @@ class MonitorWindow:
             self.ui.label_rgb.setPixmap(pix)
             self.ui.label_fl.setPixmap(pix)
 
-    def blink_light(self):
-        self.ui.frame_fall.setStyleSheet("QFrame { background-color: Red }")
-
     def play_stop(self):
-        self.player.stop()
+        self.player.player.stop()
         self.ui.frame_fall.setStyleSheet("QFrame { background-color: Green }")
+        self.ui.label_fall.setText("Solved.")
+        self.ui.label_fall.show()
 
     def update_predict_threshold(self):
         self.threshold = self.ui.horizontalSlider_threshold.value() / 10.0
@@ -118,7 +133,7 @@ class MonitorWindow:
 
     def update_music_volume(self):
         self.sound_level = self.ui.horizontalSlider_sound.value()
-        self.player.setVolume(self.sound_level)
+        self.player.player.setVolume(self.sound_level)
 
     def exam(self) -> None:
         # Thread(target=self.videographer.capture_video, args=(self.frame_queue,)).start()

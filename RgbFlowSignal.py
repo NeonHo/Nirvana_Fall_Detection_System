@@ -5,3 +5,6 @@ class RgbFlowSignal(QObject):
     not_ends = pyqtSignal(bool)
     frames = pyqtSignal(list)
     music = pyqtSignal(bool)
+    judge_message = pyqtSignal(bool)
+    per_stack = pyqtSignal(int)
+    per_flow = pyqtSignal(int)

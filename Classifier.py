@@ -24,7 +24,8 @@ class Classifier:
                 predicted = 0  # 小于阈值则为假，摔倒了。
                 if self.use_qt:
                     self.music_signal.music.emit(True)
-                print("被看护者摔倒了!!!!!!!!!")
+                    self.music_signal.judge_message.emit(True)
             else:
                 predicted = 1  # 大于阈值则为真，没摔到。
-                print("正常。")
+                if self.use_qt:
+                    self.music_signal.judge_message.emit(False)

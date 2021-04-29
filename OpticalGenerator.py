@@ -81,7 +81,7 @@ class OpticalGenerator:
             flow_output_queue.put((flow[:, :, 0], flow[:, :, 1]))
             cont += 1
             previous_frame = next_frame
-            print("flow:" + str(cont))
+            self.rgb_flow_signal.per_flow.emit(cont)
 
     def generate_optical_flow_farneback(self, avi_path, flow_output_queue_0):
         video_pointer = cv2.VideoCapture(avi_path)  # get the video.

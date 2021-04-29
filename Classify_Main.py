@@ -1,5 +1,5 @@
 def main():
-    use_qt = False
+    use_qt = True
     if use_qt:
         from PyQt5.QtWidgets import QApplication
         from MonitorWindow import MonitorWindow
