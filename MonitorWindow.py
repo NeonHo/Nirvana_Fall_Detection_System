@@ -4,7 +4,9 @@ from threading import Thread
 
 import cv2
 from PyQt5 import uic
+from PyQt5.QtCore import QDir
 from PyQt5.QtGui import QImage, QPixmap, QTextCursor
+from PyQt5.QtWidgets import QFileDialog
 
 from Classifier import Classifier
 from FeatureExtractor import FeatureExtractor
@@ -36,6 +38,7 @@ class MonitorWindow:
         self.ui0_path = work_path + separator + "windows" + separator + "untitled.ui"
         self.jpg_path = work_path + separator + "otherFiles" + separator + "alarm.jpg"
         self.sound_path = work_path + separator + "otherFiles" + separator + "alarm.mp3"
+        self.avi_directory_path = work_path + separator + "test_ground"
         self.avi_path = work_path + separator + "test_ground" + separator + "cam7_2.avi"
         self.ends_jpg_path = work_path + separator + "otherFiles" + separator + "ends.jpg"
         self.ui = uic.loadUi(self.ui0_path)
@@ -74,6 +77,10 @@ class MonitorWindow:
         self.ui.horizontalSlider_threshold.valueChanged.connect(self.update_predict_threshold)
         self.ui.pushButton.clicked.connect(self.play_stop)
         self.ui.frame_fall.setStyleSheet("QFrame { background-color: Green }")
+        self.ui.radioButton.toggled.connect(self.show_select_mp4)
+
+        # threads
+        self.optical_thread = Thread(target=self.optical_generator.generate_optical_flow_tvl1, args=(self.avi_path, self.flow_queue))
         self.exam()
 
     def show_frame(self, frames):
@@ -118,12 +125,23 @@ class MonitorWindow:
             pix = QPixmap.fromImage(frame)
             self.ui.label_rgb.setPixmap(pix)
             self.ui.label_fl.setPixmap(pix)
+            self.optical_thread.join()
 
     def play_stop(self):
         self.player.player.stop()
         self.ui.frame_fall.setStyleSheet("QFrame { background-color: Green }")
         self.ui.label_fall.setText("Solved.")
         self.ui.label_fall.show()
+
+    def show_select_mp4(self):
+        if self.ui.radioButton.isChecked():
+            dig = QFileDialog()
+            dig.setFileMode(QFileDialog.AnyFile)
+            dig.setFilter(QDir.Files)
+            if dig.exec():
+                file_paths = dig.selectedFiles()
+                self.avi_path = file_paths[0]
+                self.optical_thread.start()
 
     def update_predict_threshold(self):
         self.threshold = self.ui.horizontalSlider_threshold.value() / 10.0
@@ -137,6 +155,5 @@ class MonitorWindow:
 
     def exam(self) -> None:
         # Thread(target=self.videographer.capture_video, args=(self.frame_queue,)).start()
-        Thread(target=self.optical_generator.generate_optical_flow_tvl1, args=(self.avi_path, self.flow_queue)).start()
         Thread(target=self.feature_extractor.extract, args=(self.flow_queue, self.feature_queue,)).start()
         Thread(target=self.classifier.classify_single, args=(self.feature_queue,)).start()
