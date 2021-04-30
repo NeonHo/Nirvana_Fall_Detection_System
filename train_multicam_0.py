@@ -1,20 +1,22 @@
 from __future__ import print_function
 
-import os
-
-import h5py
-import matplotlib
-import numpy as np
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.layers import (Input, Activation, Dense, Dropout)
-from keras.layers.advanced_activations import ELU
-from keras.layers.normalization import BatchNormalization
-from keras.models import Model
-from keras.optimizers import Adam
-from matplotlib import pyplot as plt
 from numpy.random import seed
+
+import numpy as np
+import matplotlib
+
+from matplotlib import pyplot as plt
+import os
+import h5py
+
+from keras.models import load_model, Model
+from keras.layers import (Input, Activation, Dense, Dropout)
+from keras.optimizers import Adam
+from keras.layers.normalization import BatchNormalization
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import confusion_matrix, accuracy_score, roc_curve, auc
-from sklearn.model_selection import StratifiedShuffleSplit, KFold
+from sklearn.model_selection import StratifiedShuffleSplit
+from keras.layers.advanced_activations import ELU
 
 seed(1)
 matplotlib.use('Agg')
@@ -33,37 +35,31 @@ use_checkpoint = False
 # --------------------------
 # 'models\\''models/'
 # 'plots\\''plots/'
-best_model_path = 'models\\'
-plots_folder = 'plots\\'
+best_model_path = 'models/'
+plots_folder = 'plots/'
 checkpoint_path = best_model_path + 'fold_'
 # 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
 # '/content/drive/MyDrive/train/saved_features/'
-saved_files_folder = 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
+saved_files_folder = '/content/drive/MyDrive/train/saved_features/'
 features_file = saved_files_folder + 'features_multicam.h5'
 labels_file = saved_files_folder + 'labels_multicam.h5'
 features_key = 'features'
 labels_key = 'labels'
 
 num_cameras = 8
-fold_num = 6
 L = 10
 num_features = 4096
 batch_norm = True
 learning_rate = 0.001
 mini_batch_size = 0
 weight_0 = 1
-epochs = 2000  # 6000
+epochs = 2000
 use_validation = True
-use_early_stop = False
-hidden_layer_units_num = 4096
-hidden_lambda = 0.01
-output_lambda = 0.01
+# After the training stops, use train+validation to train for 1 epoch
+use_val_for_training = False
 val_size = 100
 # Threshold to classify between positive and negative
 threshold = 0.5
-# dropout prob
-dropout_l1 = 0.1
-dropout_l2 = 0.2
 
 # Name of the experiment
 exp = 'multicam_lr{}_batchs{}_batchnorm{}_w0_{}'.format(learning_rate, mini_batch_size, batch_norm, weight_0)
@@ -162,38 +158,6 @@ def load_dataset():
     return cams_x, cams_y
 
 
-def divide_k_fold(cams_x, cams_y, fold_num):
-    # every cam gives (val_size/num_cameras)/2 zero-sample and (val_size/num_cameras)/2 one-sample.
-
-    cams_x_blocks_list = []  # row = cams_num, column = k, element is fold
-    cams_y_blocks_list = []  # row = cams_num, column = k, element is fold
-    for cam in range(num_cameras):
-        cam_x = cams_x[cam]
-        cam_y = cams_y[cam]
-        zeroes = np.asarray(np.where(cam_y == 0)[0])
-        ones = np.asarray(np.where(cam_y == 1)[0])
-        k_fold = KFold(n_splits=fold_num, shuffle=True)
-        k_fold0_indexes = k_fold.split(zeroes)
-        k_fold1_indexes = k_fold.split(ones)
-        cam_x_blocks_list = []  # row = k, element is fold
-        cam_y_blocks_list = []  # row = k, element is fold
-        # divide zeros and ones into 5 blocks.
-        for fold in range(fold_num):
-            _, test0_indexes = next(k_fold0_indexes)
-            _, test1_indexes = next(k_fold1_indexes)
-            indexes_0 = zeroes[test0_indexes]
-            indexes_1 = ones[test1_indexes]
-            indexes = np.concatenate([indexes_0, indexes_1], axis=0)
-            fold_x = cam_x[indexes]
-            fold_y = cam_y[indexes]
-            cam_x_blocks_list.append(fold_x)
-            cam_y_blocks_list.append(fold_y)
-        cams_x_blocks_list.append(cam_x_blocks_list)
-        cams_y_blocks_list.append(cam_y_blocks_list)
-
-    return cams_x_blocks_list, cams_y_blocks_list
-
-
 def main():
     # ========================================================================
     # TRAINING
@@ -206,36 +170,17 @@ def main():
     specificities = []
     auc_s = []
     accuracies = []
-    cams_x_blocks_list, cams_y_blocks_list = divide_k_fold(cams_x, cams_y, fold_num=fold_num)
-    # row = cams_num, column = k, element is fold transform into row = k, column = cams_num
-    folds_x = []
-    folds_y = []
-    for fold_index in range(fold_num):
-        # a list which every element comes from all cameras.
-        cams_x_folds = [cam_x_folds[fold_index] for cam_x_folds in cams_x_blocks_list]
-        cams_y_folds = [cam_y_folds[fold_index] for cam_y_folds in cams_y_blocks_list]
-        cams_x_folds = np.concatenate(cams_x_folds)
-        cams_y_folds = np.concatenate(cams_y_folds)
-        folds_x.append(cams_x_folds)
-        folds_y.append(cams_y_folds)
-        del cams_x_folds
-        del cams_y_folds
-    del cams_x
-    del cams_y
-    del cams_x_blocks_list
-    del cams_y_blocks_list
 
-    # 8-fold cross validation
-    for fold_index in range(fold_num):
+    # LEAVE-ONE-CAMERA-OUT CROSS-VALIDATION
+    for cam in range(num_cameras):
         print('=' * 30)
-        print(str(fold_num) + '-fold cross validation : {} fold'.format(fold_index))
+        print('LEAVE-ONE-OUT STEP {}/8'.format(cam + 1))
         print('=' * 30)
-
-        test_x = folds_x[fold_index]
-        test_y = folds_y[fold_index]
-        train_x = folds_x[0: fold_index] + folds_x[fold_index + 1:]
-        train_y = folds_y[0: fold_index] + folds_y[fold_index + 1:]
-
+        # cams_x[nb_cam] contains all the optical flow stacks of the 'cam' camera ('cam' is an integer from 0 to 7)
+        test_x = cams_x[cam]
+        test_y = cams_y[cam]
+        train_x = cams_x[0:cam] + cams_x[cam + 1:]
+        train_y = cams_y[0:cam] + cams_y[cam + 1:]
         # Flatten to 1D arrays
         train_x = np.asarray([train_x[i][j] for i in range(len(train_x)) for j in range(len(train_x[i]))])
         train_y = np.asarray([train_y[i][j] for i in range(len(train_y)) for j in range(len(train_y[i]))])
@@ -250,41 +195,39 @@ def main():
         train_indices_0, val_indices_0 = next(indices_0)
         train_indices_1, val_indices_1 = next(indices_1)
 
-        x_train = np.concatenate([train_x[zeroes, ...][train_indices_0, ...], train_x[ones, ...][train_indices_1, ...]],
-                                 axis=0)
-        y_train = np.concatenate([train_y[zeroes, ...][train_indices_0, ...], train_y[ones, ...][train_indices_1, ...]],
-                                 axis=0)
-        x_val = np.concatenate([train_x[zeroes, ...][val_indices_0, ...], train_x[ones, ...][val_indices_1, ...]],
-                               axis=0)
-        y_val = np.concatenate([train_y[zeroes, ...][val_indices_0, ...], train_y[ones, ...][val_indices_1, ...]],
-                               axis=0)
+        x_train = np.concatenate([train_x[zeroes, ...][train_indices_0, ...],
+                                  train_x[ones, ...][train_indices_1, ...]], axis=0)
+        y_train = np.concatenate([train_y[zeroes, ...][train_indices_0, ...],
+                                  train_y[ones, ...][train_indices_1, ...]], axis=0)
+        x_val = np.concatenate([train_x[zeroes, ...][val_indices_0, ...],
+                                train_x[ones, ...][val_indices_1, ...]], axis=0)
+        y_val = np.concatenate([train_y[zeroes, ...][val_indices_0, ...],
+                                train_y[ones, ...][val_indices_1, ...]], axis=0)
 
         del train_x
         del train_y
 
         # ==================== CLASSIFIER ========================
-        # input layer
         extracted_features = Input(shape=(num_features,), dtype='float32', name='input')
         if batch_norm:
             x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(extracted_features)
             x = Activation('relu')(x)
         else:
             x = ELU(alpha=1.0)(extracted_features)
-        # hidden layer
-        x = Dropout(dropout_l1)(x)
-        x = Dense(hidden_layer_units_num, name='fc2', kernel_initializer='glorot_uniform')(x)
+
+        x = Dropout(0.1)(x)
+        x = Dense(4096, name='fc2', kernel_initializer='glorot_uniform')(x)
         if batch_norm:
             x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
             x = Activation('relu')(x)
         else:
             x = ELU(alpha=1.0)(x)
-        # output layer
-        x = Dropout(dropout_l2)(x)
+        x = Dropout(0.2)(x)
         x = Dense(1, name='predictions', kernel_initializer='glorot_uniform')(x)
         x = Activation('sigmoid')(x)
 
         classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
-        fold_best_model_path = best_model_path + 'multicam_fold_{}.h5'.format(fold_index)
+        fold_best_model_path = best_model_path + 'multicam_fold_{}.h5'.format(cam)
         classifier.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
 
         if not use_checkpoint:
@@ -296,20 +239,13 @@ def main():
             if use_validation:
                 # callback definition
                 metric = 'val_loss'
-                if use_early_stop:
-                    e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
-                    c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True,
-                                        save_weights_only=True, mode='auto')
-                    callbacks = [e, c]
-                else:
-                    c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True,
-                                        save_weights_only=True,
-                                        mode='auto')
-                    callbacks = [c]
+                e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
+                c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True, save_weights_only=True,
+                                    mode='auto')
+                callbacks = [e, c]
             validation_data = None
             if use_validation:
                 validation_data = (x_val, y_val)
-
             _mini_batch_size = mini_batch_size
             if mini_batch_size == 0:
                 _mini_batch_size = x_train.shape[0]
@@ -327,8 +263,27 @@ def main():
             if not use_validation:
                 classifier.save_weights(fold_best_model_path)
 
-            plot_training_info(plots_folder + exp + '_fold' + str(fold_index), ['accuracy', 'loss'], save_plots,
-                               history.history)
+            plot_training_info(plots_folder + exp + '_fold' + str(cam),
+                               ['accuracy', 'loss'], save_plots, history.history)
+
+            if use_validation and use_val_for_training:
+                classifier = load_model(fold_best_model_path)
+                # Use full training set (training+validation)
+                x_train = np.concatenate((x_train, x_val), axis=0)
+                y_train = np.concatenate((y_train, y_val), axis=0)
+
+                classifier.fit(
+                    x_train,
+                    y_train,
+                    validation_data=validation_data,
+                    batch_size=_mini_batch_size,
+                    epochs=epochs,
+                    shuffle='batch',
+                    class_weight=class_weight,
+                    callbacks=callbacks
+                )
+
+                classifier.save_weights(fold_best_model_path)
 
         # ==================== EVALUATION ========================
         # Load best model
@@ -362,7 +317,7 @@ def main():
         fpr, tpr, _ = roc_curve(test_y, predicted)
         roc_auc = auc(fpr, tpr)
 
-        print('FOLD {} results:'.format(fold_index))
+        print('FOLD/CAMERA {} results:'.format(cam))
         print('TP: {}, TN: {}, FP: {}, FN: {}'.format(tp, tn, fp, fn))
         print('TPR: {}, TNR: {}, FPR: {}, FNR: {}'.format(tpr, tnr, fpr, fnr))
         print('Sensitivity/Recall: {}'.format(recall))
