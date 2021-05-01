@@ -8,8 +8,6 @@ class Classifier:
         self.features_path = features_path
         self.features_key = features_key  # 提取的H5特征文件中的键名
         self.threshold = threshold  # 判断阈值
-        self.duration = 1000  # millisecond
-        self.freq = 500  # Hz
         self.use_qt = use_qt
         self.music_signal = None
         if self.use_qt:
@@ -18,6 +16,7 @@ class Classifier:
 
     def classify_single(self, feature_input_queue):
         while True:
+            # if not feature_input_queue.empty():
             sample_feature = feature_input_queue.get()
             predicted = self.classifier.predict(sample_feature)
             if predicted < self.threshold:

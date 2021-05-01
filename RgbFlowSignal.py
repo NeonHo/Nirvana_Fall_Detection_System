@@ -8,3 +8,4 @@ class RgbFlowSignal(QObject):
     judge_message = pyqtSignal(bool)
     per_stack = pyqtSignal(int)
     per_flow = pyqtSignal(int)
+    per_rgb = pyqtSignal(list)

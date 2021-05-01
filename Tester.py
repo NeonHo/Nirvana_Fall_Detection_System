@@ -22,7 +22,7 @@ class Tester:
         self.weight_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\"
         self.mean_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\"
         self.model_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\URFD_results\\"
-        self.ui0_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\windows\\untitled.ui"
+        self.ui0_path = "/windows/MainWindow.ui"
         # component
         self.videographer = Videographer(self.video_path, self.width, self.height)
         self.feature_extractor_0 = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,

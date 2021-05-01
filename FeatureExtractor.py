@@ -1,4 +1,7 @@
 from __future__ import print_function
+
+import time
+
 import h5py
 import matplotlib
 import numpy as np
@@ -143,16 +146,18 @@ class FeatureExtractor:
         :param flow_input_queue:
         :return:
         """
+        self.img_count = 0
         while True:
-            flow_x, flow_y = flow_input_queue.get()
-            self.add_flow_images_couple(flow_x, flow_y)
-            # print("optical flow images:\t" + str(self.img_count) + "压入光流栈。")
-            # and (self.img_count % self.stack_length == 0)
-            if (self.img_count >= self.stack_length) and (self.img_count % (self.stack_length / 2) == 0):
-                # Subtract mean 减去均值，做到归一化。
-                self.signal.per_stack.emit(self.img_count)
-                self.flow_stack = self.flow_stack - np.tile(self.flow_mean[..., np.newaxis],
-                                                            (1, 1, 1, self.flow_stack.shape[3]))
-                flow = np.transpose(self.flow_stack, (3, 0, 1, 2))
-                features = self.model.predict(np.expand_dims(flow[0, ...], 0))  # 进行预测。
-                feature_output_queue.put(features)
+            if not flow_input_queue.empty():
+                flow_x, flow_y = flow_input_queue.get()
+                self.add_flow_images_couple(flow_x, flow_y)
+                # print("optical flow images:\t" + str(self.img_count) + "压入光流栈。")
+                # and (self.img_count % self.stack_length == 0)
+                if (self.img_count >= self.stack_length) and (self.img_count % (self.stack_length / 2) == 0):
+                    # Subtract mean 减去均值，做到归一化。
+                    self.signal.per_stack.emit(self.img_count)
+                    self.flow_stack = self.flow_stack - np.tile(self.flow_mean[..., np.newaxis],
+                                                                (1, 1, 1, self.flow_stack.shape[3]))
+                    flow = np.transpose(self.flow_stack, (3, 0, 1, 2))
+                    features = self.model.predict(np.expand_dims(flow[0, ...], 0))  # 进行预测。
+                    feature_output_queue.put(features)
