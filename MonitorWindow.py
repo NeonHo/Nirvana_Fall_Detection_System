@@ -1,4 +1,5 @@
 import os
+import threading
 from queue import Queue
 from threading import Thread
 
@@ -58,7 +59,7 @@ class MonitorWindow:
         self.ui.label_Threshold_2.setText(str(self.threshold))
 
         # component
-        self.videographer = Videographer(self.video_path, self.width, self.height)
+        self.videographer = Videographer(self.width, self.height)
         self.feature_extractor = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,
                                                   self.features_path, self.width, self.height, use_qt=True)
         self.optical_generator = OpticalGenerator(self.video_path, self.flow_image_path, self.bound, self.width,
@@ -88,7 +89,6 @@ class MonitorWindow:
 
         # threads
         self.optical_thread = None
-        self.video_thread = None
         self.feature_thread = Thread(target=self.feature_extractor.extract,
                                      args=(self.flow_queue, self.feature_queue,))
         self.classify_thread = Thread(target=self.classifier.classify_single,
@@ -161,13 +161,18 @@ class MonitorWindow:
                 self.avi_path = file_paths[0]
                 self.threads_init()
                 self.threads_start()
+            if self.ui.radioButton.isChecked():
+                self.ui.radioButton.setAutoExclusive(False)
+                self.ui.radioButton.setChecked(False)
+                self.ui.radioButton.setAutoExclusive(True)
 
     def show_camera(self):
-        self.video_num = self.video_num + 1
-        self.ui_cam.setVisible(True)
-        self.videographer.video_path = self.video_path + str(self.video_num)
-        self.video_thread = Thread(target=self.videographer.capture_video)
-        self.video_thread.start()
+        if self.ui.radioButton_2.isChecked():
+            self.videographer.begin()
+            self.video_num = self.video_num + 1
+            self.ui_cam.setVisible(True)
+            video_path = self.video_path + str(self.video_num) + "_"
+            self.videographer.capture_video(video_path)
 
     def show_rgb(self, frames):
         rgb_frame = frames[0]
@@ -178,14 +183,11 @@ class MonitorWindow:
 
     def finish_video(self):
         self.videographer.terminal()
-        self.video_thread.join()
-        self.videographer.capture.release()
-        self.videographer.out.release()
+        self.ui_cam.setVisible(False)
         if self.ui.radioButton_2.isChecked():
             self.ui.radioButton_2.setAutoExclusive(False)
             self.ui.radioButton_2.setChecked(False)
             self.ui.radioButton_2.setAutoExclusive(True)
-        self.ui_cam.setVisible(False)
 
     def update_predict_threshold(self):
         self.threshold = self.ui.horizontalSlider_threshold.value() / 10.0
@@ -198,7 +200,6 @@ class MonitorWindow:
         self.player.player.setVolume(self.sound_level)
 
     def threads_init(self) -> None:
-        # Thread(target=self.videographer.capture_video, args=(self.frame_queue,)).start()
         # threads
         self.optical_thread = Thread(target=self.optical_generator.generate_optical_flow_tvl1,
                                      args=(self.avi_path, self.flow_queue))
