@@ -163,7 +163,7 @@ def load_dataset():
     return cams_x, cams_y
 
 
-def divide_k_fold(cams_x, cams_y, fold_num):
+def divide_k_fold(cams_x, cams_y, folds_num):
     # every cam gives (val_size/num_cameras)/2 zero-sample and (val_size/num_cameras)/2 one-sample.
 
     cams_x_blocks_list = []  # row = cams_num, column = k, element is fold
@@ -173,13 +173,13 @@ def divide_k_fold(cams_x, cams_y, fold_num):
         cam_y = cams_y[cam]
         zeroes = np.asarray(np.where(cam_y == 0)[0])
         ones = np.asarray(np.where(cam_y == 1)[0])
-        k_fold = KFold(n_splits=fold_num, shuffle=True)
+        k_fold = KFold(n_splits=folds_num, shuffle=True)
         k_fold0_indexes = k_fold.split(zeroes)
         k_fold1_indexes = k_fold.split(ones)
         cam_x_blocks_list = []  # row = k, element is fold
         cam_y_blocks_list = []  # row = k, element is fold
         # divide zeros and ones into 5 blocks.
-        for fold in range(fold_num):
+        for fold in range(folds_num):
             _, test0_indexes = next(k_fold0_indexes)
             _, test1_indexes = next(k_fold1_indexes)
             indexes_0 = zeroes[test0_indexes]
@@ -207,7 +207,7 @@ def main():
     specificities = []
     auc_s = []
     accuracies = []
-    cams_x_blocks_list, cams_y_blocks_list = divide_k_fold(cams_x, cams_y, fold_num=fold_num)
+    cams_x_blocks_list, cams_y_blocks_list = divide_k_fold(cams_x, cams_y, folds_num=fold_num)
     # row = cams_num, column = k, element is fold transform into row = k, column = cams_num
     folds_x = []
     folds_y = []
