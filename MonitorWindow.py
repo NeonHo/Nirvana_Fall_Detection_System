@@ -43,6 +43,8 @@ class MonitorWindow:
         self.sound_path = work_path + separator + "otherFiles" + separator + "alarm.mp3"
         self.avi_path = None
         self.ends_jpg_path = work_path + separator + "otherFiles" + separator + "ends.jpg"
+        self.photo_jpg_path = work_path + separator + "otherFiles" + separator + "person_photo.jpg"
+        self.personal_data = work_path + separator + "otherFiles" + separator + "person_data.txt"
         self.ui = uic.loadUi(self.ui0_path)
         self.ui_cam = uic.loadUi(self.ui1_path)
         self.ui_cam.setVisible(False)
@@ -109,11 +111,11 @@ class MonitorWindow:
 
     def update_stack_index(self, index):
         self.ui.FlowStackTextEdit.moveCursor(QTextCursor.End)
-        self.ui.FlowStackTextEdit.insertPlainText('\n' + str(index))
+        self.ui.FlowStackTextEdit.insertPlainText(str(index) + '\n')
 
     def update_flow_index(self, index):
         self.ui.FlowProcessTextEdit.moveCursor(QTextCursor.End)
-        self.ui.FlowProcessTextEdit.insertPlainText('\n' + str(index))
+        self.ui.FlowProcessTextEdit.insertPlainText(str(index) + '\n')
 
     def play_music(self, fall):
         if fall:
@@ -180,9 +182,21 @@ class MonitorWindow:
         self.ui_cam.label.setPixmap(pix_left)
         self.ui_cam.label.show()
 
+    def show_photo(self):
+        img = cv2.imread(self.photo_jpg_path)
+        img = cv2.resize(img, (self.width, self.height))
+        frame = QImage(img, self.width, self.height, QImage.Format_RGB888)
+        pix = QPixmap.fromImage(frame)
+        self.ui.label_photo.setPixmap(pix)
+        self.ui.label_photo.show()
+        with open(self.personal_data, "r") as f:
+            data = f.read()
+            self.ui.plainTextEdit_data.insertPlainText(data)
+
     def finish_video(self):
         self.videographer.terminal()
         self.ui_cam.setVisible(False)
+        self.show_photo()
         if self.ui.radioButton_2.isChecked():
             self.ui.radioButton_2.setAutoExclusive(False)
             self.ui.radioButton_2.setChecked(False)

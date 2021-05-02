@@ -1,5 +1,4 @@
 import threading
-import time
 
 import cv2
 from PyQt5 import QtWidgets
@@ -49,7 +48,7 @@ class Videographer:
         self.lock.acquire()
         if self.__running:
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            capture = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+            capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
             out = cv2.VideoWriter(video_path + "video.avi", fourcc, 20.0, (self.width, self.height))
         ret = True
         self.lock.release()
