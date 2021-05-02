@@ -148,6 +148,8 @@ class MonitorWindow:
             pix = QPixmap.fromImage(frame)
             self.ui.label_rgb.setPixmap(pix)
             self.ui.label_fl.setPixmap(pix)
+            self.ui.label_photo.clear()
+            self.ui.plainTextEdit_data.clear()
             self.feature_extractor.img_count = 0
             self.threads_ends()
             if self.ui.radioButton.isChecked():
