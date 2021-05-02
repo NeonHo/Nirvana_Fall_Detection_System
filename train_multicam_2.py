@@ -306,8 +306,7 @@ def main():
                     callbacks = [e, c]
                 else:
                     c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True,
-                                        save_weights_only=True,
-                                        mode='auto')
+                                        save_weights_only=True, mode='auto')
                     callbacks = [c]
             validation_data = None
             if use_validation:
