@@ -5,6 +5,7 @@ import os
 import h5py
 import matplotlib
 import numpy as np
+from keras import regularizers
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import (Input, Activation, Dense, Dropout)
 from keras.layers.advanced_activations import ELU
@@ -236,7 +237,8 @@ def main():
         x = ELU(alpha=1.0)(extracted_features)
     # hidden layer
     x = Dropout(dropout_l1)(x)
-    x = Dense(hidden_layer_units_num, name='fc2', kernel_initializer='glorot_uniform')(x)
+    x = Dense(hidden_layer_units_num, name='fc2', kernel_initializer='glorot_uniform',
+              kernel_regularizer=regularizers.l2(hidden_lambda))(x)
     if batch_norm:
         x = BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
         x = Activation('relu')(x)
@@ -244,7 +246,8 @@ def main():
         x = ELU(alpha=1.0)(x)
     # output layer
     x = Dropout(dropout_l2)(x)
-    x = Dense(1, name='predictions', kernel_initializer='glorot_uniform')(x)
+    x = Dense(1, name='predictions', kernel_initializer='glorot_uniform',
+              kernel_regularizer=regularizers.l2(output_lambda))(x)
     x = Activation('sigmoid')(x)
 
     classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
@@ -263,11 +266,11 @@ def main():
             if use_early_stop:
                 e = EarlyStopping(monitor=metric, min_delta=0, patience=100, mode='auto')
                 c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True,
-                                    save_weights_only=True, mode='auto')
+                                    save_weights_only=False, mode='auto')
                 callbacks = [e, c]
             else:
                 c = ModelCheckpoint(fold_best_model_path, monitor=metric, save_best_only=True,
-                                    save_weights_only=True, mode='auto')
+                                    save_weights_only=False, mode='auto')
                 callbacks = [c]
         validation_data = None
         if use_validation:
