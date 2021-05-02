@@ -66,7 +66,7 @@ class MonitorWindow:
         self.optical_generator = OpticalGenerator(self.video_path, self.flow_image_path, self.bound, self.width,
                                                   self.height, self.feature_extractor.stack_length, use_qt=True,
                                                   is_windows=self.is_windows)
-        self.classifier = Classifier(self.model_path, self.features_path, use_qt=True, threshold=self.threshold)
+        self.classifier = Classifier(self.features_path, use_qt=True, threshold=self.threshold)
 
         # queues
         self.flow_queue = Queue(1)
@@ -85,6 +85,8 @@ class MonitorWindow:
         self.ui.frame_fall.setStyleSheet("QFrame { background-color: Green }")
         self.ui.radioButton.toggled.connect(self.show_select_avi)
         self.ui.radioButton_2.toggled.connect(self.show_camera)
+        self.ui.radioButton_3.toggled.connect(self.select_model_combine)
+        self.ui.radioButton_4.toggled.connect(self.select_model_multi_cam)
         self.ui_cam.pushButton.clicked.connect(self.finish_video)
         self.videographer.signal.per_rgb.connect(self.show_rgb)
 
@@ -95,6 +97,13 @@ class MonitorWindow:
         self.classify_thread = Thread(target=self.classifier.classify_single,
                                       args=(self.feature_queue,))
         self.feature_thread.start()
+
+    def select_model_combine(self):
+        self.classifier.select_model(self.model_path + "combined_final_model.h5")
+        self.classify_thread.start()
+
+    def select_model_multi_cam(self):
+        self.classifier.select_model(self.model_path + "multicam_final.h5")
         self.classify_thread.start()
 
     def show_frame(self, frames):
@@ -160,6 +169,7 @@ class MonitorWindow:
             if dig.exec():
                 file_paths = dig.selectedFiles()
                 self.avi_path = file_paths[0]
+                self.show_photo()
                 self.threads_init()
                 self.threads_start()
             if self.ui.radioButton.isChecked():
@@ -196,7 +206,6 @@ class MonitorWindow:
     def finish_video(self):
         self.videographer.terminal()
         self.ui_cam.setVisible(False)
-        self.show_photo()
         if self.ui.radioButton_2.isChecked():
             self.ui.radioButton_2.setAutoExclusive(False)
             self.ui.radioButton_2.setChecked(False)
@@ -218,9 +227,7 @@ class MonitorWindow:
                                      args=(self.avi_path, self.flow_queue))
 
     def threads_start(self):
-        if (self.optical_thread is not None) and \
-                (self.feature_thread is not None) and \
-                (self.classify_thread is not None):
+        if self.optical_thread is not None:
             self.optical_thread.start()
 
     def threads_ends(self):
