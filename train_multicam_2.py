@@ -34,12 +34,12 @@ use_checkpoint = False
 # --------------------------
 # 'models\\''models/'
 # 'plots\\''plots/'
-best_model_path = 'models\\'
-plots_folder = 'plots\\'
+best_model_path = 'models/'
+plots_folder = 'plots/'
 checkpoint_path = best_model_path + 'fold_'
 # 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
 # '/content/drive/MyDrive/train/saved_features/'
-saved_files_folder = 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
+saved_files_folder = '/content/drive/MyDrive/train/saved_features/'
 features_file = saved_files_folder + 'features_multicam.h5'
 labels_file = saved_files_folder + 'labels_multicam.h5'
 features_key = 'features'
@@ -57,8 +57,8 @@ epochs = 2000  # 6000
 use_validation = True
 use_early_stop = False
 hidden_layer_units_num = 4096
-hidden_lambda = 0.01
-output_lambda = 0.01
+hidden_lambda = 0.001
+output_lambda = 0.001
 val_size = 100
 # Threshold to classify between positive and negative
 threshold = 0.5
@@ -131,7 +131,7 @@ def load_dataset():
 
     # Load the data separated by cameras for cross-validation
     stages = []
-    for i in range(1, 5):
+    for i in range(1, 25):
         stages.append('chute{:02}'.format(i))
     cams_x = []
     cams_y = []
