@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import time
+import os
 
 import h5py
 import matplotlib
@@ -9,8 +9,6 @@ import scipy.io as sio
 from keras.layers import (Conv2D, MaxPooling2D, Flatten, Dense, ZeroPadding2D)
 from keras.models import Sequential
 from numpy.random import seed
-import os
-
 
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 seed(1)
