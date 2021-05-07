@@ -3,7 +3,7 @@ from Classifier import Classifier
 from FeatureExtractor import FeatureExtractor
 from MonitorWindow import MonitorWindow
 from OpticalGenerator import OpticalGenerator
-from VideoGrapher import Videographer
+from VideoGrapher import VideoGrapher
 from queue import Queue
 from PyQt5.QtWidgets import QApplication
 import sys
@@ -24,7 +24,7 @@ class Tester:
         self.model_path = "F:\\fsociety\\graduation_project\\Nirvana_Fall_Detection_System\\otherFiles\\URFD_results\\"
         self.ui0_path = "/windows/MainWindow.ui"
         # component
-        self.videographer = Videographer(self.video_path, self.width, self.height)
+        self.videographer = VideoGrapher(self.video_path, self.width, self.height)
         self.feature_extractor_0 = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,
                                                     self.features_path, self.width, self.height)
         # self.feature_extractor_1 = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,

@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import QMessageBox
 from RgbFlowSignal import RgbFlowSignal
 
 
-class Videographer:
+class VideoGrapher:
     def __init__(self, width, height):
         self.width = width
         self.height = height

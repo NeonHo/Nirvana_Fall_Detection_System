@@ -12,7 +12,7 @@ from Classifier import Classifier
 from FeatureExtractor import FeatureExtractor
 from MusicPlayer import MusicPlayer
 from OpticalGenerator import OpticalGenerator
-from VideoGrapher import Videographer
+from VideoGrapher import VideoGrapher
 
 
 class MonitorWindow:
@@ -60,7 +60,7 @@ class MonitorWindow:
         self.ui.label_Threshold_2.setText(str(self.threshold))
 
         # component
-        self.video_grapher = Videographer(self.width, self.height)
+        self.video_grapher = VideoGrapher(self.width, self.height)
         self.feature_extractor = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,
                                                   self.features_path, self.width, self.height, use_qt=True)
         self.optical_generator = OpticalGenerator(self.video_path, self.flow_image_path, self.bound, self.width,
