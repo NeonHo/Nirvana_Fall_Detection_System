@@ -34,11 +34,11 @@ class Classifier:
             sample_feature = feature_input_queue.get()
             predicted = self.classifier.predict(sample_feature)
             if predicted < self.threshold:
-                predicted = 0  # 小于阈值则为假，摔倒了。
+                # predicted = 0  # 小于阈值则为假，摔倒了。
                 if self.use_qt:
                     self.music_signal.music.emit(True)
                     self.music_signal.judge_message.emit(True)
             else:
-                predicted = 1  # 大于阈值则为真，没摔到。
+                # predicted = 1  # 大于阈值则为真，没摔到。
                 if self.use_qt:
                     self.music_signal.judge_message.emit(False)
