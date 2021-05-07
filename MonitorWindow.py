@@ -60,7 +60,7 @@ class MonitorWindow:
         self.ui.label_Threshold_2.setText(str(self.threshold))
 
         # component
-        self.videographer = Videographer(self.width, self.height)
+        self.video_grapher = Videographer(self.width, self.height)
         self.feature_extractor = FeatureExtractor(self.weight_path, self.mean_path, self.flow_image_path,
                                                   self.features_path, self.width, self.height, use_qt=True)
         self.optical_generator = OpticalGenerator(self.video_path, self.flow_image_path, self.bound, self.width,
@@ -88,7 +88,7 @@ class MonitorWindow:
         self.ui.radioButton_3.toggled.connect(self.select_model_combine)
         self.ui.radioButton_4.toggled.connect(self.select_model_multi_cam)
         self.ui_cam.pushButton.clicked.connect(self.finish_video)
-        self.videographer.signal.per_rgb.connect(self.show_rgb)
+        self.video_grapher.signal.per_rgb.connect(self.show_rgb)
 
         # threads
         self.optical_thread = None
@@ -181,11 +181,11 @@ class MonitorWindow:
 
     def show_camera(self):
         if self.ui.radioButton_2.isChecked():
-            self.videographer.begin()
+            self.video_grapher.begin()
             self.video_num = self.video_num + 1
             self.ui_cam.setVisible(True)
             video_path = self.video_path + str(self.video_num) + "_"
-            self.videographer.capture_video(video_path)
+            self.video_grapher.capture_video(video_path)
 
     def show_rgb(self, frames):
         rgb_frame = frames[0]
@@ -206,7 +206,7 @@ class MonitorWindow:
             self.ui.plainTextEdit_data.insertPlainText(data)
 
     def finish_video(self):
-        self.videographer.terminal()
+        self.video_grapher.terminal()
         self.ui_cam.setVisible(False)
         if self.ui.radioButton_2.isChecked():
             self.ui.radioButton_2.setAutoExclusive(False)
