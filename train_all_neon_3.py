@@ -56,7 +56,6 @@ weight_0 = 2
 epochs = 2000
 use_validation = True
 use_early_stop = False
-cam_times = 6  # Multi-cam dataset is how many times of the ur fall dataset.
 # hidden layer units' number
 hidden_layer_units_num = 3072
 hidden_lambda = 0.01
