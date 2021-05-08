@@ -46,6 +46,7 @@ features_key = 'features'
 labels_key = 'labels'
 
 # Hyper parameters
+folds_num = 5
 L = 10
 num_features = 4096
 batch_norm = True
@@ -61,10 +62,10 @@ hidden_layer_units_num = 3072
 hidden_lambda = 0.01
 output_lambda = 0.01
 # validation
-val_size = 528
-val_size_stages = val_size // 8
-val_size_ur = (val_size // 8) * 6
-val_size_fdd = val_size // 8
+val_size = 66
+val_size_stages = 710
+val_size_ur = 66
+val_size_fdd = 66
 # Threshold to classify between positive and negative
 threshold = 0.5
 # dropout pro
@@ -239,7 +240,25 @@ def divide_k_fold(cams_x, cams_y, folds_num):
         cams_x_blocks_list.append(cam_x_blocks_list)
         cams_y_blocks_list.append(cam_y_blocks_list)
 
-    return cams_x_blocks_list, cams_y_blocks_list
+    # row = cams_num, column = k, element is fold transform into row = k, column = cams_num
+    stages_x = []
+    stages_y = []
+    for fold_index in range(folds_num):
+        # a list which every element comes from all cameras.
+        cams_x_folds = [cam_x_folds[fold_index] for cam_x_folds in cams_x_blocks_list]
+        cams_y_folds = [cam_y_folds[fold_index] for cam_y_folds in cams_y_blocks_list]
+        cams_x_folds = np.concatenate(cams_x_folds)
+        cams_y_folds = np.concatenate(cams_y_folds)
+        stages_x.append(cams_x_folds)
+        stages_y.append(cams_y_folds)
+        del cams_x_folds
+        del cams_y_folds
+    del cams_x
+    del cams_y
+    del cams_x_blocks_list
+    del cams_y_blocks_list
+
+    return stages_x, stages_y
 
 
 def reload_ur_fall_dataset(limit_size=False):
@@ -293,7 +312,7 @@ def main():
 
     # load dataset as the size of UR
     x_ur, y_ur = reload_ur_fall_dataset(True)
-    cams_x, cams_y = reload_multiple_cameras_dataset()
+    x_stages, y_stages = reload_multiple_cameras_dataset()
     x_fdd, y_fdd = reload_fall_detection_dataset(True)
 
     # all 0 and all 1 indices from different datasets.
@@ -307,25 +326,7 @@ def main():
     specificities = {'combined': [], 'multicam': [], 'urfd': [], 'fdd': []}
 
     # Use a 5 fold cross-validation
-    cams_x_blocks_list, cams_y_blocks_list = divide_k_fold(cams_x, cams_y, folds_num=5)
-    # row = cams_num, column = k, element is fold transform into row = k, column = cams_num
-    stages_x = []
-    stages_y = []
-    for fold_index in range(5):
-        # a list which every element comes from all cameras.
-        cams_x_folds = [cam_x_folds[fold_index] for cam_x_folds in cams_x_blocks_list]
-        cams_y_folds = [cam_y_folds[fold_index] for cam_y_folds in cams_y_blocks_list]
-        cams_x_folds = np.concatenate(cams_x_folds)
-        cams_y_folds = np.concatenate(cams_y_folds)
-        stages_x.append(cams_x_folds)
-        stages_y.append(cams_y_folds)
-        del cams_x_folds
-        del cams_y_folds
-    del cams_x
-    del cams_y
-    del cams_x_blocks_list
-    del cams_y_blocks_list
-
+    stages_x, stages_y = divide_k_fold(x_stages, y_stages, folds_num=folds_num)
     k_fold = KFold(n_splits=5, shuffle=True)
     k_fold0_ur = k_fold.split(all0_ur)
     k_fold1_ur = k_fold.split(all1_ur)
@@ -333,10 +334,10 @@ def main():
     k_fold1_fdd = k_fold.split(all1_fdd)
 
     # CROSS-VALIDATION: Stratified partition of the dataset into train/test sets.
-    for fold in range(5):
+    for fold_index in range(folds_num):
         # stages
-        test_x_cam = stages_x[fold_index]
-        test_y_cam = stages_y[fold_index]
+        test_x_stages = stages_x[fold_index]
+        test_y_stages = stages_y[fold_index]
         train_x_stages = stages_x[0: fold_index] + stages_x[fold_index + 1:]
         train_y_stages = stages_y[0: fold_index] + stages_y[fold_index + 1:]
         # Flatten to 1D arrays
@@ -368,9 +369,9 @@ def main():
             # Create a validation subset from the training set
             zeroes = np.asarray(np.where(train_y_stages == 0)[0])
             ones = np.asarray(np.where(train_y_stages == 1)[0])
-            train_val_split_0 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size / 2), random_state=7)
+            train_val_split_0 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size_stages / 2), random_state=7)
             indices_0 = train_val_split_0.split(train_x_stages[zeroes, ...], np.argmax(train_y_stages[zeroes, ...], 1))
-            train_val_split_1 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size / 2), random_state=7)
+            train_val_split_1 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size_stages / 2), random_state=7)
             indices_1 = train_val_split_1.split(train_x_stages[ones, ...], np.argmax(train_y_stages[ones, ...], 1))
             train_indices_0, val_indices_0 = next(indices_0)
             train_indices_1, val_indices_1 = next(indices_1)
@@ -407,7 +408,7 @@ def main():
         x_train_ur, y_train_ur = sample_from_dataset(x_ur, y_ur, train0_ur, train1_ur)
         x_train_fdd, y_train_fdd = sample_from_dataset(x_fdd, y_fdd, train0_fdd, train1_fdd)
         # create the evaluation folds for each dataset
-        x_test_stages, y_test_stages = test_x_cam, test_y_cam
+        x_test_stages, y_test_stages = test_x_stages, test_y_stages
         x_test_ur, y_test_ur = sample_from_dataset(x_ur, y_ur, test0_ur, test1_ur)
         x_test_fdd, y_test_fdd = sample_from_dataset(x_fdd, y_fdd, test0_fdd, test1_fdd)
 
@@ -436,7 +437,7 @@ def main():
         x = Activation('sigmoid')(x)
 
         classifier = Model(inputs=extracted_features, outputs=x, name='classifier')
-        fold_best_model_path = best_model_path + 'combined_fold_{}.h5'.format(fold)
+        fold_best_model_path = best_model_path + 'combined_fold_{}.h5'.format(fold_index)
         classifier.compile(optimizer=adam, loss='binary_crossentropy', metrics=['accuracy'])
 
         if not use_checkpoint:
@@ -476,7 +477,7 @@ def main():
             if not use_validation:
                 classifier.save_weights(fold_best_model_path)
 
-            plot_training_info(plots_folder + exp + '_fold' + str(fold), ['accuracy', 'loss'], save_plots,
+            plot_training_info(plots_folder + exp + '_fold' + str(fold_index), ['accuracy', 'loss'], save_plots,
                                history.history)
 
         # evaluation
