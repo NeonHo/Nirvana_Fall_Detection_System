@@ -25,11 +25,13 @@ save_plots = True
 # Set to 'True' if you want to restore a previous trained models Training is skipped and test is done
 use_checkpoint = False
 # --------------------------
-
+# 'models\\''plots\\'
+# '/content/models/''/content/plots/'
 best_model_path = '/content/models/'
 plots_folder = '/content/plots/'
 checkpoint_path = best_model_path + 'fold_'
 # 'F:\\fsociety\\graduation_project\\Project\\train\\train_mark2\\saved_features\\'
+# '/content/drive/MyDrive/train/saved_features/'
 saved_files_folder = '/content/drive/MyDrive/train/saved_features/'
 features_file = {
     'urfd': saved_files_folder + 'features_urfd_tf.h5',
@@ -52,18 +54,16 @@ learning_rate = 0.001
 mini_batch_size = 512
 weight_0 = 2
 epochs = 2000
-use_validation = False
+use_validation = True
 use_early_stop = False
-cam_times = 6  # Multi-cam dataset is how many times of the ur fall dataset.
 # hidden layer units' number
 hidden_layer_units_num = 3072
-hidden_lambda = 0.01
-output_lambda = 0.01
+hidden_lambda = 0.001
+output_lambda = 0.001
 # validation
-val_size = 0
-val_size_stages = val_size // 8
-val_size_ur = (val_size // 8) * 6
-val_size_fdd = val_size // 8
+val_size_stages = 710
+val_size_ur = 66
+val_size_fdd = 66
 # Threshold to classify between positive and negative
 threshold = 0.5
 # dropout pro
@@ -264,10 +264,11 @@ def main():
     train_x_stages = np.concatenate(x_stages)
     train_y_stages = np.concatenate(y_stages)
     x_fdd, y_fdd = reload_fall_detection_dataset(True)
-
+    del x_stages
+    del y_stages
     # all 0 and all 1 indices from different datasets.
-    all0_stages = np.asarray(np.where(y_stages == 0)[0])
-    all1_stages = np.asarray(np.where(y_stages == 1)[0])
+    all0_stages = np.asarray(np.where(train_y_stages == 0)[0])
+    all1_stages = np.asarray(np.where(train_y_stages == 1)[0])
     all0_ur = np.asarray(np.where(y_ur == 0)[0])
     all1_ur = np.asarray(np.where(y_ur == 1)[0])
     all0_fdd = np.asarray(np.where(y_fdd == 0)[0])
@@ -289,24 +290,22 @@ def main():
     x_train_stages, y_train_stages = None, None
     if use_validation:
         # stages
-        train_val_split_0 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size / 2), random_state=7)
-        indices_0 = train_val_split_0.split(train_x_stages[train0_stages, ...], np.argmax(train_y_stages[train0_stages, ...], 1))
-        train_val_split_1 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size / 2), random_state=7)
-        indices_1 = train_val_split_1.split(train_x_stages[train1_stages, ...], np.argmax(train_y_stages[train1_stages, ...], 1))
+        train_val_split_0 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size_stages / 2), random_state=7)
+        indices_0 = train_val_split_0.split(train_x_stages[train0_stages, ...],
+                                            np.argmax(train_y_stages[train0_stages, ...], 1))
+        train_val_split_1 = StratifiedShuffleSplit(n_splits=1, test_size=int(val_size_stages / 2), random_state=7)
+        indices_1 = train_val_split_1.split(train_x_stages[train1_stages, ...],
+                                            np.argmax(train_y_stages[train1_stages, ...], 1))
         train_indices_0, val_indices_0 = next(indices_0)
         train_indices_1, val_indices_1 = next(indices_1)
-        x_train_stages = np.concatenate(
-            [train_x_stages[train0_stages, ...][train_indices_0, ...], train_x_stages[train1_stages, ...][train_indices_1, ...]],
-            axis=0)
-        y_train_stages = np.concatenate(
-            [train_y_stages[train0_stages, ...][train_indices_0, ...], train_y_stages[train1_stages, ...][train_indices_1, ...]],
-            axis=0)
-        x_val_stages = np.concatenate(
-            [train_x_stages[train0_stages, ...][val_indices_0, ...], train_x_stages[train1_stages, ...][val_indices_1, ...]],
-            axis=0)
-        y_val_stages = np.concatenate(
-            [train_y_stages[train0_stages, ...][val_indices_0, ...], train_y_stages[train1_stages, ...][val_indices_1, ...]],
-            axis=0)
+        x_train_stages = np.concatenate([train_x_stages[train0_stages, ...][train_indices_0, ...],
+                                         train_x_stages[train1_stages, ...][train_indices_1, ...]], axis=0)
+        y_train_stages = np.concatenate([train_y_stages[train0_stages, ...][train_indices_0, ...],
+                                         train_y_stages[train1_stages, ...][train_indices_1, ...]], axis=0)
+        x_val_stages = np.concatenate([train_x_stages[train0_stages, ...][val_indices_0, ...],
+                                       train_x_stages[train1_stages, ...][val_indices_1, ...]], axis=0)
+        y_val_stages = np.concatenate([train_y_stages[train0_stages, ...][val_indices_0, ...],
+                                       train_y_stages[train1_stages, ...][val_indices_1, ...]], axis=0)
         del train_x_stages
         del train_y_stages
         # ur
@@ -331,6 +330,29 @@ def main():
     # join train
     x_train = np.concatenate((x_train_stages, x_train_ur, x_train_fdd), axis=0)
     y_train = np.concatenate((y_train_stages, y_train_ur, y_train_fdd), axis=0)
+
+    # delete
+    del all0_fdd
+    del all0_stages
+    del all0_ur
+    del all1_fdd
+    del all1_stages
+    del all1_ur
+    del train0_fdd
+    del train0_stages
+    del train0_ur
+    del train1_fdd
+    del train1_stages
+    del train1_ur
+    del train_indices_0
+    del train_indices_1
+    del val0_fdd
+    del val0_ur
+    del val1_fdd
+    del val1_ur
+    del val_index
+    del val_indices_0
+    del val_indices_1
 
     # classifier
     # input layer
