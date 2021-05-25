@@ -45,6 +45,7 @@ class OpticalGenerator:
             k = cv.waitKey(1) & 0xff
             if k == 27:  # esc key to escape.
                 break
+            cv.imwrite(flow_save_path + "RGB_" + str(cont) + ".jpg", frame2)
             cv.imwrite(flow_save_path + "flow_x_" + str(cont) + ".jpg", flow[:, :, 0])
             cv.imwrite(flow_save_path + "flow_y_" + str(cont) + ".jpg", flow[:, :, 1])
             cont += 1

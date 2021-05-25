@@ -10,28 +10,27 @@ import numpy as np
 
 def main():
     # Get a VideoCapture object from video and store it in vs
-    vc = cv2.VideoCapture("F:\\fsociety\\graduation_project\\Project\\TestClassifier\\Test1Package\\videos\\ofiice_video.avi")
+    vc = cv2.VideoCapture(
+        "F:\\fsociety\\graduation_project\\Project\\TestClassifier\\Test1Package\\videos\\ofiice_video.avi")
     # Read first frame
     ret, first_frame = vc.read()
     # Scale and resize image
     resize_dim = 600
     max_dim = max(first_frame.shape)
-    scale = resize_dim/max_dim
+    scale = resize_dim / max_dim
     first_frame = cv2.resize(first_frame, None, fx=scale, fy=scale)
     # Convert to gray scale
     prev_gray = cv2.cvtColor(first_frame, cv2.COLOR_BGR2GRAY)
-
 
     # Create mask
     mask = np.zeros_like(first_frame)
     # Sets image saturation to maximum
     mask[..., 1] = 255
 
-
     out = cv2.VideoWriter("F:\\fsociety\\graduation_project\\Project\\Copy\\OpenCv-Optical-Flow--main\\OpenCv-Optical"
                           "-Flow--main\\video.mp4", -1, 1, (600, 600))
 
-    while(vc.isOpened()):
+    while (vc.isOpened()):
         # Read a frame from video
         ret, frame = vc.read()
 
@@ -41,7 +40,8 @@ def main():
 
         # Calculate dense optical flow by Farneback method
         # https://docs.opencv.org/3.0-beta/modules/video/doc/motion_analysis_and_object_tracking.html#calcopticalflowfarneback
-        flow = cv2.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale = 0.5, levels = 5, winsize = 11, iterations = 5, poly_n = 5, poly_sigma = 1.1, flags = 0)
+        flow = cv2.calcOpticalFlowFarneback(prev_gray, gray, None, pyr_scale=0.5, levels=5, winsize=11, iterations=5,
+                                            poly_n=5, poly_sigma=1.1, flags=0)
         # Compute the magnitude and angle of the 2D vectors
         magnitude, angle = cv2.cartToPolar(flow[..., 0], flow[..., 1])
         # Set image hue according to the optical flow direction
@@ -55,7 +55,7 @@ def main():
         frame = cv2.resize(frame, None, fx=scale, fy=scale)
 
         # Open a new window and displays the output frame
-        dense_flow = cv2.addWeighted(frame, 1,rgb, 2, 0)
+        dense_flow = cv2.addWeighted(frame, 1, rgb, 2, 0)
         cv2.imshow("Dense optical flow", dense_flow)
         out.write(dense_flow)
         # Update previous frame
@@ -68,10 +68,8 @@ def main():
 
     cv2.destroyAllWindows()
 
-
     # In[ ]:
+
 
 if __name__ == "__main__":
     main()
-
-
